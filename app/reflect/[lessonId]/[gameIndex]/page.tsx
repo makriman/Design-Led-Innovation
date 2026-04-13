@@ -4,13 +4,11 @@ import db, { parseLessonGames, type LessonRow } from "@/lib/db";
 import { requireSessionUser } from "@/lib/server-auth";
 
 type ReflectPageProps = {
-  params:
-    | { lessonId: string; gameIndex: string }
-    | Promise<{ lessonId: string; gameIndex: string }>;
+  params: Promise<{ lessonId: string; gameIndex: string }>;
 };
 
 export default async function ReflectPage({ params }: ReflectPageProps) {
-  const { lessonId, gameIndex } = await Promise.resolve(params);
+  const { lessonId, gameIndex } = await params;
   const user = await requireSessionUser();
 
   const lesson = db

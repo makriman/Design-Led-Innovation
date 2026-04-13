@@ -4,11 +4,11 @@ import db, { parseLessonGames, type LessonRow } from "@/lib/db";
 import { requireSessionUser } from "@/lib/server-auth";
 
 type GeneratePageProps = {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export default async function GenerateResultPage({ params }: GeneratePageProps) {
-  const { id } = await Promise.resolve(params);
+  const { id } = await params;
   const user = await requireSessionUser();
 
   const lesson = db
