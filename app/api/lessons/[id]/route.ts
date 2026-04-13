@@ -4,7 +4,7 @@ import db, { parseLessonGames, type LessonRow, type ReflectionRow } from "@/lib/
 import { AUTH_COOKIE_NAME, requireApiUserFromCookie } from "@/lib/auth";
 
 type LessonRouteProps = {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 };
 
 export async function GET(_request: Request, { params }: LessonRouteProps) {
@@ -15,7 +15,7 @@ export async function GET(_request: Request, { params }: LessonRouteProps) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const { id } = await Promise.resolve(params);
+  const { id } = await params;
 
   const lesson = db
     .prepare("SELECT * FROM lessons WHERE id = ? AND user_id = ?")
