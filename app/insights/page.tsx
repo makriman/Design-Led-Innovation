@@ -140,6 +140,12 @@ export default async function InsightsPage() {
               <Card key={reflection.id}>
                 <CardHeader>
                   <CardTitle className="text-xl">{reflection.game_name}</CardTitle>
+                  <p className="text-base text-slate-700">
+                    Rating:{" "}
+                    <span className="font-semibold text-primary">
+                      {reflection.star_rating > 0 ? `${reflection.star_rating}/5` : "Not rated"}
+                    </span>
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-2 text-base text-slate-800">
                   <p>

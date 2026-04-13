@@ -87,6 +87,7 @@ export const ReflectionSchema = z.object({
   lessonId: z.number().int().positive(),
   gameIndex: z.number().int().min(0).max(2),
   gameName: z.string().min(1).max(120),
+  starRating: z.number().int().min(1).max(5),
   whatWorked: z.string().trim().min(3).max(3000),
   whatFlopped: z.string().trim().min(3).max(3000),
   whatToChange: z.string().trim().min(3).max(3000),

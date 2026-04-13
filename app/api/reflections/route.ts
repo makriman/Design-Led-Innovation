@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       lessonId: Number(body.lessonId),
       gameIndex: Number(body.gameIndex),
       gameName: body.gameName,
+      starRating: Number(body.starRating),
       whatWorked: body.whatWorked,
       whatFlopped: body.whatFlopped,
       whatToChange: body.whatToChange,
@@ -48,10 +49,11 @@ export async function POST(request: Request) {
     if (existing) {
       db.prepare(
         `UPDATE reflections
-         SET game_name = ?, what_worked = ?, what_flopped = ?, what_to_change = ?, created_at = CURRENT_TIMESTAMP
+         SET game_name = ?, star_rating = ?, what_worked = ?, what_flopped = ?, what_to_change = ?, created_at = CURRENT_TIMESTAMP
          WHERE id = ?`
       ).run(
         parsed.data.gameName,
+        parsed.data.starRating,
         parsed.data.whatWorked,
         parsed.data.whatFlopped,
         parsed.data.whatToChange,
@@ -59,13 +61,14 @@ export async function POST(request: Request) {
       );
     } else {
       db.prepare(
-        `INSERT INTO reflections (user_id, lesson_id, game_index, game_name, what_worked, what_flopped, what_to_change)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO reflections (user_id, lesson_id, game_index, game_name, star_rating, what_worked, what_flopped, what_to_change)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         user.id,
         parsed.data.lessonId,
         parsed.data.gameIndex,
         parsed.data.gameName,
+        parsed.data.starRating,
         parsed.data.whatWorked,
         parsed.data.whatFlopped,
         parsed.data.whatToChange

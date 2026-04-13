@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS reflections (
   lesson_id INTEGER NOT NULL,
   game_index INTEGER NOT NULL,
   game_name TEXT NOT NULL,
+  star_rating INTEGER NOT NULL DEFAULT 3,
   what_worked TEXT NOT NULL,
   what_flopped TEXT NOT NULL,
   what_to_change TEXT NOT NULL,
@@ -63,6 +64,11 @@ CREATE TABLE IF NOT EXISTS insights_cache (
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 `);
+
+const reflectionColumns = db.prepare("PRAGMA table_info(reflections)").all() as Array<{ name: string }>;
+if (!reflectionColumns.some((column) => column.name === "star_rating")) {
+  db.exec("ALTER TABLE reflections ADD COLUMN star_rating INTEGER NOT NULL DEFAULT 3;");
+}
 
 export type UserRow = {
   id: number;
@@ -89,6 +95,7 @@ export type ReflectionRow = {
   lesson_id: number;
   game_index: number;
   game_name: string;
+  star_rating: number;
   what_worked: string;
   what_flopped: string;
   what_to_change: string;
