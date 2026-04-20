@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, isUnlockedToken } from "@/lib/auth";
+
+const AUTH_COOKIE_NAME = "inspire_unlock";
 
 const protectedRoutes = ["/", "/dashboard", "/generate", "/history", "/reflect", "/insights"];
 
@@ -9,7 +10,7 @@ function isProtectedPath(pathname: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const unlocked = isUnlockedToken(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  const unlocked = Boolean(request.cookies.get(AUTH_COOKIE_NAME)?.value);
 
   if (pathname === "/unlock" && unlocked) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
