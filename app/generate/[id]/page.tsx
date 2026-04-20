@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { GenerateResultExperience } from "@/components/GenerateResultExperience";
-import { getLessonById, parseLessonGames } from "@/lib/db";
+import { getLessonById, getReflectionsByLessonId, parseLessonGames } from "@/lib/db";
 import { requireSessionUser } from "@/lib/server-auth";
 
 type GeneratePageProps = {
@@ -17,6 +17,10 @@ export default async function GenerateResultPage({ params }: GeneratePageProps) 
   }
 
   const games = parseLessonGames(lesson);
+  const reflections = await getReflectionsByLessonId(lesson.id);
+  const ratingByGameIndex = Object.fromEntries(
+    reflections.map((reflection) => [reflection.game_index, reflection.star_rating])
+  );
 
   return (
     <GenerateResultExperience
@@ -24,6 +28,7 @@ export default async function GenerateResultPage({ params }: GeneratePageProps) 
       grade={lesson.grade}
       subject={lesson.subject}
       games={games}
+      ratingByGameIndex={ratingByGameIndex}
     />
   );
 }

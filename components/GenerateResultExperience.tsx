@@ -17,6 +17,7 @@ type GenerateResultExperienceProps = {
   grade: string;
   subject: string;
   games: Game[];
+  ratingByGameIndex: Record<string, number>;
 };
 
 type RevealPhase = "loading" | "revealing" | "ready";
@@ -40,7 +41,13 @@ function CardSkeleton() {
   );
 }
 
-export function GenerateResultExperience({ lessonId, grade, subject, games }: GenerateResultExperienceProps) {
+export function GenerateResultExperience({
+  lessonId,
+  grade,
+  subject,
+  games,
+  ratingByGameIndex,
+}: GenerateResultExperienceProps) {
   const searchParams = useSearchParams();
   const fromGenerator = searchParams.get("ready") === "1";
   const [phase, setPhase] = useState<RevealPhase>("loading");
@@ -120,6 +127,7 @@ export function GenerateResultExperience({ lessonId, grade, subject, games }: Ge
               imageUrl={imageUrl}
               subject={subject}
               grade={grade}
+              teacherRating={ratingByGameIndex[String(index)] ?? null}
             />
           ) : (
             <CardSkeleton key={`skeleton-${lessonId}-${index}`} />

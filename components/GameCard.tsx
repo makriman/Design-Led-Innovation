@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, MapPin, Sparkles, Users, X } from "lucide-react";
+import { Loader2, MapPin, Sparkles, Star, Users, X } from "lucide-react";
 import type { Game } from "@/lib/schemas";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,14 +14,25 @@ type GameCardProps = {
   imageUrl: string;
   subject: string;
   grade: string;
+  teacherRating?: number | null;
 };
 
-export function GameCard({ lessonId, gameIndex, initialGame, imageUrl, subject, grade }: GameCardProps) {
+export function GameCard({
+  lessonId,
+  gameIndex,
+  initialGame,
+  imageUrl,
+  subject,
+  grade,
+  teacherRating = null,
+}: GameCardProps) {
   const [game, setGame] = useState(initialGame);
   const [isOpen, setIsOpen] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const ratingValue =
+    typeof teacherRating === "number" && teacherRating >= 1 && teacherRating <= 5 ? teacherRating : null;
 
   const materialLabel = useMemo(() => {
     if (game.materials.length === 1) {
@@ -88,12 +99,16 @@ export function GameCard({ lessonId, gameIndex, initialGame, imageUrl, subject, 
             <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => setIsOpen(true)}>
               More
             </Button>
-            <Link
-              href={`/reflect/${lessonId}/${gameIndex}`}
-              className={cn(buttonVariants({ variant: "accent", size: "sm" }), "flex-1 rounded-xl")}
-            >
-              I played this
-            </Link>
+            {ratingValue !== null ? (
+              <RatingBadge rating={ratingValue} className="flex-1" />
+            ) : (
+              <Link
+                href={`/reflect/${lessonId}/${gameIndex}`}
+                className={cn(buttonVariants({ variant: "accent", size: "sm" }), "flex-1 rounded-xl")}
+              >
+                I played this
+              </Link>
+            )}
           </div>
         </div>
       </article>
@@ -155,7 +170,7 @@ export function GameCard({ lessonId, gameIndex, initialGame, imageUrl, subject, 
               {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
               {saveMessage ? <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{saveMessage}</p> : null}
 
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className={cn("grid gap-2", ratingValue !== null ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                 <Button onClick={regenerateThisGame} variant="outline" className="rounded-xl" disabled={isRegenerating}>
                   {isRegenerating ? (
                     <span className="inline-flex items-center gap-2">
@@ -166,12 +181,16 @@ export function GameCard({ lessonId, gameIndex, initialGame, imageUrl, subject, 
                     "Refresh this idea"
                   )}
                 </Button>
-                <Link
-                  href={`/reflect/${lessonId}/${gameIndex}`}
-                  className={cn(buttonVariants({ variant: "accent" }), "rounded-xl")}
-                >
-                  I played this
-                </Link>
+                {ratingValue !== null ? (
+                  <RatingBadge rating={ratingValue} className="h-10 justify-center" />
+                ) : (
+                  <Link
+                    href={`/reflect/${lessonId}/${gameIndex}`}
+                    className={cn(buttonVariants({ variant: "accent" }), "rounded-xl")}
+                  >
+                    I played this
+                  </Link>
+                )}
                 <Button variant="ghost" className="rounded-xl" onClick={() => setIsOpen(false)}>
                   Close
                 </Button>
@@ -181,6 +200,32 @@ export function GameCard({ lessonId, gameIndex, initialGame, imageUrl, subject, 
         </div>
       ) : null}
     </>
+  );
+}
+
+function RatingBadge({ rating, className }: { rating: number; className?: string }) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary",
+        className
+      )}
+      title={`Teacher rating: ${rating}/5`}
+    >
+      <span className="truncate">Rated</span>
+      <span className="inline-flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Star
+            key={`rating-star-${value}`}
+            className={cn(
+              "h-3.5 w-3.5",
+              value <= rating ? "fill-amber-400 text-amber-400" : "fill-transparent text-slate-300"
+            )}
+          />
+        ))}
+      </span>
+      <span>{rating}/5</span>
+    </div>
   );
 }
 
