@@ -31,7 +31,7 @@ Inspire is a Next.js app for primary school teachers in Sub-Saharan Africa. Teac
 1. Install dependencies:
 
 ```bash
-pnpm install
+npm install
 ```
 
 2. Copy env template and fill values:
@@ -59,7 +59,7 @@ node -e 'const { randomBytes, scryptSync } = require("node:crypto"); const passc
 4. Run the app:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000)
