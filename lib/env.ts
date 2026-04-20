@@ -13,7 +13,7 @@ function resolveAnthropicModel(): string {
 
 function resolveAnthropicFeedbackModel(): string {
   const configuredModel = process.env.ANTHROPIC_FEEDBACK_MODEL?.trim();
-  return configuredModel || "claude-3-5-haiku-latest";
+  return configuredModel || "claude-3-haiku-20240307";
 }
 
 export const env = {
