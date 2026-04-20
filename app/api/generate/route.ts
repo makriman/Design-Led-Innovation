@@ -36,7 +36,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ lessonId, games: generation.games });
   } catch (error) {
-    console.error("POST /api/generate failed", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("POST /api/generate failed:", message);
     return NextResponse.json({ error: "Failed to generate games." }, { status: 500 });
   }
 }

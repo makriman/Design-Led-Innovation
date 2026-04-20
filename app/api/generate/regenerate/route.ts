@@ -53,7 +53,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ game: nextGame, games: updatedGames });
   } catch (error) {
-    console.error("POST /api/generate/regenerate failed", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("POST /api/generate/regenerate failed:", message);
     return NextResponse.json({ error: "Failed to regenerate game." }, { status: 500 });
   }
 }
