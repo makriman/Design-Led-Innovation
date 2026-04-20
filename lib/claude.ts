@@ -14,9 +14,16 @@ import {
   InsightsResponseSchema,
 } from "@/lib/schemas";
 
-const anthropic = new Anthropic({
-  apiKey: env.anthropicApiKey,
-});
+let anthropicClient: Anthropic | null = null;
+
+function getAnthropicClient() {
+  if (!anthropicClient) {
+    anthropicClient = new Anthropic({
+      apiKey: env.anthropicApiKey,
+    });
+  }
+  return anthropicClient;
+}
 
 const systemPrompt = `You are a curriculum designer for primary school teachers in Sub-Saharan Africa. You design play-based learning games that work in classrooms with 40-plus students, no electricity, no printers, and no internet. Materials must be items the teacher already has: chalk, blackboard, paper, stones, sticks, bottle caps, leaves, the children themselves, their voices, and their bodies. Never suggest printouts, worksheets that need copying, devices, videos, purchased toys, or any paid resource. Keep language simple. Assume English is a second or third language for the teacher. Use short sentences.`;
 
@@ -219,7 +226,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
     };
 
     try {
-      const response = await anthropic.messages.create({
+      const response = await getAnthropicClient().messages.create({
         model: env.anthropicModel,
         max_tokens: 4000,
         temperature: 0.7,
@@ -349,7 +356,7 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
   };
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: env.anthropicModel,
       max_tokens: 2000,
       temperature: 0.5,
@@ -460,7 +467,7 @@ Rules:
   };
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: env.anthropicModel,
       max_tokens: 1200,
       temperature: 0.4,

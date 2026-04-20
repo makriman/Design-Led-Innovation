@@ -12,9 +12,19 @@ function resolveAnthropicModel(): string {
 }
 
 export const env = {
-  anthropicApiKey: requireEnv("ANTHROPIC_API_KEY"),
-  anthropicModel: resolveAnthropicModel(),
-  databaseUrl: requireEnv("DATABASE_URL"),
-  appPasscodeHash: requireEnv("APP_PASSCODE_HASH"),
-  sessionSecret: process.env.SESSION_SECRET || process.env.JWT_SECRET || requireEnv("SESSION_SECRET"),
+  get anthropicApiKey() {
+    return requireEnv("ANTHROPIC_API_KEY");
+  },
+  get anthropicModel() {
+    return resolveAnthropicModel();
+  },
+  get databaseUrl() {
+    return requireEnv("DATABASE_URL");
+  },
+  get appPasscodeHash() {
+    return requireEnv("APP_PASSCODE_HASH");
+  },
+  get sessionSecret() {
+    return process.env.SESSION_SECRET || process.env.JWT_SECRET || requireEnv("SESSION_SECRET");
+  },
 };
