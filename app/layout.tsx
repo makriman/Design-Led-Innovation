@@ -11,6 +11,14 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Inspire",
   description: "Play-based learning, ready in seconds.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

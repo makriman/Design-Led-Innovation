@@ -6,7 +6,7 @@ import styles from "./DashboardSplash.module.css";
 import wordmarkWhite from "@/public/brand/inspire-wordmark-white.png";
 
 const FULL_ANIMATION_MS = 1900;
-const REDUCED_ANIMATION_MS = 560;
+const REDUCED_ANIMATION_MS = 620;
 
 export function DashboardSplash() {
   const [isVisible, setIsVisible] = useState(true);
@@ -57,11 +57,11 @@ export function DashboardSplash() {
     >
       <div className={styles.logoStage}>
         <Image src={wordmarkWhite} alt="" className={styles.wordmark} priority />
-        <span className={styles.dotRunner} aria-hidden="true" />
+        <span className={`${styles.dot} ${styles.dotLeft}`} aria-hidden="true" />
+        <span className={`${styles.dot} ${styles.dotRight}`} aria-hidden="true" />
       </div>
       <p className={styles.missionStatement}>
-        <span>Making learning fun</span>
-        <span>for everyone.</span>
+        <span>Design joyful, practical lessons for real classrooms, reflect on what happened, and improve.</span>
       </p>
     </div>
   );
