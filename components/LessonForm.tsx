@@ -59,7 +59,7 @@ export function LessonForm() {
     return "Make Learning Fun";
   }, [grade, subject]);
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
@@ -69,33 +69,16 @@ export function LessonForm() {
     }
 
     setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          grade,
-          subject,
-          studentCount,
-          topic,
-          durationMinutes,
-        }),
-      });
-
-      const data = (await response.json()) as { lessonId?: number; error?: string };
-      if (!response.ok || !data.lessonId) {
-        setError(data.error ?? "Could not generate games. Please try again.");
-        return;
-      }
-
-      router.push(`/generate/${data.lessonId}`);
-      router.refresh();
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
+    const params = new URLSearchParams({
+      grade,
+      subject,
+      studentCount: String(studentCount),
+      durationMinutes: String(durationMinutes),
+    });
+    if (topic.trim()) {
+      params.set("topic", topic.trim());
     }
+    router.push(`/generate?${params.toString()}`);
   }
 
   return (
@@ -190,7 +173,7 @@ export function LessonForm() {
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Generating 3 ideas...
+            Opening generator...
           </span>
         ) : (
           <span>{primaryLabel}</span>
