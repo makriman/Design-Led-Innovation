@@ -1,15 +1,15 @@
 .overlay {
-  --splash-duration: 3800ms;
+  --splash-duration: 1900ms;
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
   overflow: hidden;
-  background:
-    radial-gradient(112% 84% at 50% 18%, #3535ff 0%, #2424ff 40%, #1a1aff 70%, #0a0acb 100%);
   pointer-events: all;
-  animation: overlayExit var(--splash-duration) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background:
+    radial-gradient(120% 88% at 50% 10%, #4a4aff 0%, #2a2aff 38%, #1a1aff 74%, #0e0ecf 100%);
+  animation: overlayExit var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .overlay::before {
@@ -19,21 +19,7 @@
   background: #fff;
   opacity: 0;
   pointer-events: none;
-  animation: whiteFlashLayer var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.revealReady {
-  pointer-events: none;
-}
-
-.atmosphere {
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(38% 38% at 20vw 72vh, rgba(255, 255, 255, 0.22), transparent 75%),
-    radial-gradient(44% 36% at 78vw 26vh, rgba(255, 255, 255, 0.16), transparent 80%);
-  opacity: 0;
-  animation: atmospherePulse var(--splash-duration) ease-in-out forwards;
+  animation: whiteStage var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .logoStage {
@@ -46,40 +32,25 @@
   width: 100%;
   height: auto;
   opacity: 0;
-  transform: translateY(14px) scale(0.975);
+  transform: translateY(16px) scale(0.98);
   filter: blur(4px);
-  animation: wordmarkSettle var(--splash-duration) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: wordmarkSequence var(--splash-duration) cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.dot {
+.dotRunner {
   position: absolute;
-  width: clamp(22px, 2.8vw, 56px);
+  left: 28%;
+  top: 31%;
+  width: clamp(22px, 2.7vw, 52px);
   aspect-ratio: 1 / 1;
   border-radius: 999px;
-  background: radial-gradient(
-    circle at 34% 34%,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(255, 255, 255, 0.98) 44%,
-    rgba(255, 255, 255, 0.9) 74%,
-    rgba(255, 255, 255, 0.76) 100%
-  );
-  box-shadow: 0 0 40px rgba(255, 255, 255, 0.34);
+  background:
+    radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.98) 54%, rgba(255, 255, 255, 0.92) 100%);
+  box-shadow: 0 0 34px rgba(255, 255, 255, 0.35);
   transform-origin: center;
-  will-change: transform, opacity, filter, box-shadow;
-}
-
-.dotLeft {
-  left: 8%;
-  top: 30%;
-  transform: translate(-50%, -50%) scale(0.9);
-  animation: dotLeftJourney var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.dotRight {
-  left: 62%;
-  top: 10%;
-  transform: translate(-50%, -50%) scale(0.9);
-  animation: dotRightJourney var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translate(-50%, -50%) scale(0.72);
+  will-change: transform, opacity, filter;
+  animation: dotJump var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .missionStatement {
@@ -92,8 +63,8 @@
   gap: 0.08em;
   margin: 0;
   padding: 0 1.25rem;
-  transform: translateY(20px) scale(0.95);
-  font-size: clamp(2rem, 5.2vw, 4.8rem);
+  transform: translateY(16px) scale(0.96);
+  font-size: clamp(2rem, 5vw, 4.6rem);
   font-weight: 800;
   line-height: 0.95;
   letter-spacing: -0.01em;
@@ -101,7 +72,7 @@
   text-align: center;
   opacity: 0;
   filter: blur(6px);
-  animation: missionStatementReveal var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: missionSequence var(--splash-duration) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .missionStatement span {
@@ -109,19 +80,15 @@
 }
 
 .overlayReduced {
-  --splash-duration: 840ms;
+  --splash-duration: 560ms;
   animation: overlayReducedExit var(--splash-duration) ease forwards;
 }
 
 .overlayReduced::before {
-  animation: reducedWhiteFlash var(--splash-duration) ease forwards;
+  animation: reducedWhiteStage var(--splash-duration) ease forwards;
 }
 
-.overlayReduced .atmosphere {
-  display: none;
-}
-
-.overlayReduced .dot {
+.overlayReduced .dotRunner {
   display: none;
 }
 
@@ -129,205 +96,86 @@
   animation: reducedWordmark var(--splash-duration) ease forwards;
 }
 
-@keyframes wordmarkSettle {
+.overlayReduced .missionStatement {
+  animation: reducedMission var(--splash-duration) ease forwards;
+}
+
+@keyframes wordmarkSequence {
   0% {
     opacity: 0;
-    transform: translateY(18px) scale(0.97);
-    filter: blur(5px);
+    transform: translateY(16px) scale(0.98);
+    filter: blur(4px);
   }
   12% {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
   }
-  46% {
+  44% {
     opacity: 1;
-  }
-  58% {
-    opacity: 0;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes atmospherePulse {
-  0% {
-    opacity: 0;
-    transform: scale(1);
-  }
-  14% {
-    opacity: 0.62;
-    transform: scale(1.03);
-  }
-  34% {
-    opacity: 0.95;
-    transform: scale(1.12);
-  }
-  58% {
-    opacity: 0;
-    transform: scale(1.18);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.2);
-  }
-}
-
-@keyframes dotLeftJourney {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.88);
-  }
-  9% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  24% {
-    transform: translate(-50%, -50%) translate3d(-16px, -18px, 0) scale(1.12);
-  }
-  40% {
-    transform: translate(-50%, -50%) translate3d(-6vw, -3vh, 0) scale(1.45);
-  }
-  54% {
-    transform: translate(-50%, -50%) translate3d(-20vw, -12vh, 0) scale(24);
-  }
-  66% {
-    transform: translate(-50%, -50%) translate3d(-48vw, -30vh, 0) scale(94);
-    filter: blur(1.2px);
-  }
-  78% {
-    opacity: 0.94;
-    transform: translate(-50%, -50%) translate3d(-78vw, -48vh, 0) scale(142);
-    filter: blur(1.9px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) translate3d(-92vw, -56vh, 0) scale(172);
-    filter: blur(2.1px);
-  }
-}
-
-@keyframes dotRightJourney {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.88);
-  }
-  9% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  24% {
-    transform: translate(-50%, -50%) translate3d(16px, -18px, 0) scale(1.12);
-  }
-  40% {
-    transform: translate(-50%, -50%) translate3d(6vw, -3vh, 0) scale(1.45);
-  }
-  54% {
-    transform: translate(-50%, -50%) translate3d(20vw, -12vh, 0) scale(22);
-  }
-  66% {
-    transform: translate(-50%, -50%) translate3d(46vw, -30vh, 0) scale(92);
-    filter: blur(1.2px);
-  }
-  78% {
-    opacity: 0.94;
-    transform: translate(-50%, -50%) translate3d(76vw, -48vh, 0) scale(138);
-    filter: blur(1.9px);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) translate3d(90vw, -56vh, 0) scale(166);
-    filter: blur(2.1px);
-  }
-}
-
-@keyframes whiteFlashLayer {
-  0%,
-  58% {
-    opacity: 0;
-  }
-  62%,
-  90% {
-    opacity: 1;
-  }
-  99% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes overlayExit {
-  0%,
-  97% {
-    opacity: 1;
-    visibility: visible;
-  }
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-@keyframes overlayReducedExit {
-  0%,
-  92% {
-    opacity: 1;
-    visibility: visible;
-  }
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-@keyframes reducedWhiteFlash {
-  0%,
-  54% {
-    opacity: 0;
-  }
-  60%,
-  88% {
-    opacity: 1;
-  }
-  96%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes reducedWordmark {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-    filter: blur(2px);
-  }
-  24% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
   }
   56% {
-    opacity: 1;
+    opacity: 0;
+    transform: translateY(-2px) scale(1);
+    filter: blur(0);
   }
   100% {
     opacity: 0;
-    transform: translateY(0);
+    transform: translateY(-2px) scale(1);
     filter: blur(0);
   }
 }
 
-@keyframes missionStatementReveal {
+@keyframes dotJump {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(0) scale(0.72);
+  }
+  8% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(0) scale(1);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(225%) scale(1.04);
+  }
+  52% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(245%) scale(1.08);
+  }
+  64% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateX(245%) scale(72);
+    filter: blur(1.4px);
+  }
+  74% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(245%) scale(96);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(245%) scale(96);
+    filter: blur(2px);
+  }
+}
+
+@keyframes whiteStage {
+  0%,
+  57% {
+    opacity: 0;
+  }
+  63%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes missionSequence {
   0%,
   62% {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(16px) scale(0.96);
     filter: blur(6px);
   }
   70%,
@@ -338,24 +186,65 @@
   }
   100% {
     opacity: 0;
-    transform: translateY(-6px) scale(1.02);
+    transform: translateY(-4px) scale(1.01);
     filter: blur(0);
   }
 }
 
-.overlayReduced .missionStatement {
-  animation: reducedMissionStatement var(--splash-duration) ease forwards;
+@keyframes overlayExit {
+  0%,
+  96% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
 }
 
-@keyframes reducedMissionStatement {
-  0%,
-  50% {
+@keyframes reducedWordmark {
+  0% {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  44% {
+    opacity: 1;
+  }
+  58%,
+  100% {
+    opacity: 0;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes reducedWhiteStage {
+  0%,
+  52% {
+    opacity: 0;
+  }
+  58%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes reducedMission {
+  0%,
+  58% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
     filter: blur(1.5px);
   }
-  62%,
-  88% {
+  66%,
+  90% {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
@@ -364,5 +253,17 @@
     opacity: 0;
     transform: translateY(-2px) scale(1.01);
     filter: blur(0);
+  }
+}
+
+@keyframes overlayReducedExit {
+  0%,
+  95% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
   }
 }

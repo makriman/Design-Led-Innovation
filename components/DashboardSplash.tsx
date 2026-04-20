@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import styles from "./DashboardSplash.module.css";
 import wordmarkWhite from "@/public/brand/inspire-wordmark-white.png";
 
-const FULL_ANIMATION_MS = 3800;
-const REDUCED_ANIMATION_MS = 840;
+const FULL_ANIMATION_MS = 1900;
+const REDUCED_ANIMATION_MS = 560;
 
 export function DashboardSplash() {
   const [isVisible, setIsVisible] = useState(true);
-  const [contentVisible, setContentVisible] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [motionReady, setMotionReady] = useState(false);
 
@@ -35,11 +34,9 @@ export function DashboardSplash() {
     }
 
     const duration = prefersReducedMotion ? REDUCED_ANIMATION_MS : FULL_ANIMATION_MS;
-    const earlyReveal = window.setTimeout(() => setContentVisible(true), Math.round(duration * 0.8));
     const splashEnd = window.setTimeout(() => setIsVisible(false), duration);
 
     return () => {
-      window.clearTimeout(earlyReveal);
       window.clearTimeout(splashEnd);
     };
   }, [isVisible, motionReady, prefersReducedMotion]);
@@ -53,22 +50,14 @@ export function DashboardSplash() {
       className={[
         styles.overlay,
         prefersReducedMotion ? styles.overlayReduced : "",
-        contentVisible ? styles.revealReady : "",
       ]
         .filter(Boolean)
         .join(" ")}
       aria-hidden="true"
     >
-      <div className={styles.atmosphere} />
       <div className={styles.logoStage}>
-        <Image
-          src={wordmarkWhite}
-          alt=""
-          className={styles.wordmark}
-          priority
-        />
-        <span className={`${styles.dot} ${styles.dotLeft}`} aria-hidden="true" />
-        <span className={`${styles.dot} ${styles.dotRight}`} aria-hidden="true" />
+        <Image src={wordmarkWhite} alt="" className={styles.wordmark} priority />
+        <span className={styles.dotRunner} aria-hidden="true" />
       </div>
       <p className={styles.missionStatement}>
         <span>Making learning fun</span>

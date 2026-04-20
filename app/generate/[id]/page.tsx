@@ -23,7 +23,7 @@ export default async function GenerateResultPage({ params }: GeneratePageProps) 
     <section className="space-y-5">
       <div className="no-print">
         <h1 className="text-3xl font-black tracking-tight text-slate-900">Your 3 learning games are ready</h1>
-        <p className="text-sm text-slate-500">Browse them like listings, open details, and log feedback after class.</p>
+        <p className="text-sm text-slate-500">Open each game, review the steps, and log feedback after class.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

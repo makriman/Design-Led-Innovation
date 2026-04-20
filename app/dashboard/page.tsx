@@ -17,7 +17,7 @@ export default async function DashboardPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">Kwame&apos;s Dashboard</p>
         <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">Build Better Lessons Faster</h1>
         <p className="mt-2 max-w-3xl text-base text-slate-600">
-          Build fun learning plans with an Airbnb inspired flow, review what worked, and keep improving every lesson.
+          Design joyful, practical lessons for real classrooms, reflect on what happened, and improve each next class.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
 
       <LessonHistoryFeed
         title="Past generated plans"
-        subtitle="Airbnb-inspired search and infinite scrolling history"
+        subtitle="Search and scroll through your complete lesson history"
       />
     </section>
   );
