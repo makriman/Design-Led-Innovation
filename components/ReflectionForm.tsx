@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Sparkles, Star } from "lucide-react";
+import { RatingLottie } from "@/components/RatingLottie";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -21,12 +22,51 @@ type ReflectionFormProps = {
   gameName: string;
 };
 
+const lowRatingReasonOptions = [
+  "Learners did not understand instructions",
+  "Game was too difficult for this class",
+  "Game was too easy and lost attention",
+  "Class became too noisy or chaotic",
+  "Timing was too short or too long",
+  "Materials setup failed in class",
+];
+
+const lowRatingContextOptions = [
+  "Large class management was hard",
+  "Mixed ability levels slowed progress",
+  "Language clarity was an issue",
+  "Space in classroom was limited",
+  "Unexpected interruptions happened",
+  "Energy and behavior were low",
+];
+
+const lowRatingSupportOptions = [
+  "Need a simpler version next class",
+  "Need clearer step-by-step script",
+  "Need better transition strategy",
+  "Need adaptation for large classes",
+  "Need stronger assessment cues",
+  "Need alternative low-material setup",
+];
+
 export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionFormProps) {
   const [starRating, setStarRating] = useState(0);
   const [teacherFeedback, setTeacherFeedback] = useState("");
+  const [lowRatingReason, setLowRatingReason] = useState("");
+  const [lowRatingContext, setLowRatingContext] = useState("");
+  const [lowRatingSupport, setLowRatingSupport] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coaching, setCoaching] = useState<CoachingResponse | null>(null);
+  const isLowRating = starRating > 0 && starRating <= 2;
+
+  useEffect(() => {
+    if (starRating > 2) {
+      setLowRatingReason("");
+      setLowRatingContext("");
+      setLowRatingSupport("");
+    }
+  }, [starRating]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,6 +83,11 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
       return;
     }
 
+    if (isLowRating && (!lowRatingReason || !lowRatingContext || !lowRatingSupport)) {
+      setError("Please select the low-rating details so we can improve the next plan.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -55,6 +100,9 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
           gameName,
           starRating,
           teacherFeedback,
+          lowRatingReason: lowRatingReason || undefined,
+          lowRatingContext: lowRatingContext || undefined,
+          lowRatingSupport: lowRatingSupport || undefined,
         }),
       });
 
@@ -76,14 +124,14 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
     <Card className="mx-auto w-full max-w-3xl rounded-3xl border-slate-200">
       <CardHeader>
         <CardTitle className="text-2xl font-black tracking-tight text-slate-900">I played: {gameName}</CardTitle>
-        <p className="text-sm text-slate-500">Share quick feedback and get AI coaching for next time.</p>
+        <p className="text-sm text-slate-500">Interactive review + fast coaching for your next class.</p>
       </CardHeader>
 
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <Label className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Star rating</Label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
@@ -101,6 +149,76 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
             </div>
           </div>
 
+          <RatingLottie rating={starRating} />
+
+          {isLowRating ? (
+            <section className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50/60 p-4">
+              <p className="text-sm font-semibold text-amber-800">
+                Thanks for being honest. Help us capture what failed so the next plan improves.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="lowRatingReason" className="text-sm font-semibold text-slate-700">
+                  Main issue
+                </Label>
+                <select
+                  id="lowRatingReason"
+                  value={lowRatingReason}
+                  onChange={(event) => setLowRatingReason(event.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  required
+                >
+                  <option value="">Select one</option>
+                  {lowRatingReasonOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lowRatingContext" className="text-sm font-semibold text-slate-700">
+                  Classroom factor
+                </Label>
+                <select
+                  id="lowRatingContext"
+                  value={lowRatingContext}
+                  onChange={(event) => setLowRatingContext(event.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  required
+                >
+                  <option value="">Select one</option>
+                  {lowRatingContextOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lowRatingSupport" className="text-sm font-semibold text-slate-700">
+                  Most useful support for next class
+                </Label>
+                <select
+                  id="lowRatingSupport"
+                  value={lowRatingSupport}
+                  onChange={(event) => setLowRatingSupport(event.target.value)}
+                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  required
+                >
+                  <option value="">Select one</option>
+                  {lowRatingSupportOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </section>
+          ) : null}
+
           <div>
             <Label htmlFor="teacherFeedback" className="text-sm font-semibold text-slate-700">
               How did it go?
@@ -110,7 +228,7 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
               required
               value={teacherFeedback}
               onChange={(event) => setTeacherFeedback(event.target.value)}
-              placeholder="What happened in class? What should change next time?"
+              placeholder="What happened in class? Share one win and one thing to improve."
             />
           </div>
 

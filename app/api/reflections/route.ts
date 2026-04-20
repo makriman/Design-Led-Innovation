@@ -29,6 +29,9 @@ export async function POST(request: Request) {
       gameName: body.gameName,
       starRating: Number(body.starRating),
       teacherFeedback: typeof body.teacherFeedback === "string" ? body.teacherFeedback : undefined,
+      lowRatingReason: typeof body.lowRatingReason === "string" ? body.lowRatingReason : undefined,
+      lowRatingContext: typeof body.lowRatingContext === "string" ? body.lowRatingContext : undefined,
+      lowRatingSupport: typeof body.lowRatingSupport === "string" ? body.lowRatingSupport : undefined,
       whatWorked: typeof body.whatWorked === "string" ? body.whatWorked : undefined,
       whatFlopped: typeof body.whatFlopped === "string" ? body.whatFlopped : undefined,
       whatToChange: typeof body.whatToChange === "string" ? body.whatToChange : undefined,
@@ -49,13 +52,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Game index out of range." }, { status: 400 });
     }
 
+    const lowRatingStructuredNote =
+      parsed.data.starRating <= 2
+        ? [
+            parsed.data.lowRatingReason ? `Main issue: ${parsed.data.lowRatingReason}` : "",
+            parsed.data.lowRatingContext ? `Context: ${parsed.data.lowRatingContext}` : "",
+            parsed.data.lowRatingSupport ? `Need next: ${parsed.data.lowRatingSupport}` : "",
+          ]
+            .filter(Boolean)
+            .join(" | ")
+        : "";
+
     const teacherFeedback =
-      parsed.data.teacherFeedback?.trim() ||
-      [parsed.data.whatWorked, parsed.data.whatFlopped, parsed.data.whatToChange].filter(Boolean).join(" | ");
+      [
+        parsed.data.teacherFeedback?.trim() ||
+          [parsed.data.whatWorked, parsed.data.whatFlopped, parsed.data.whatToChange].filter(Boolean).join(" | "),
+        lowRatingStructuredNote,
+      ]
+        .filter(Boolean)
+        .join(" | ")
+        .trim();
 
     const whatWorked = parsed.data.whatWorked?.trim() || teacherFeedback;
-    const whatFlopped = parsed.data.whatFlopped?.trim() || "Teacher noted this in the main feedback field.";
-    const whatToChange = parsed.data.whatToChange?.trim() || "Apply the AI coaching tips in the next lesson.";
+    const whatFlopped =
+      parsed.data.whatFlopped?.trim() ||
+      (parsed.data.starRating <= 2
+        ? [parsed.data.lowRatingReason, parsed.data.lowRatingContext].filter(Boolean).join(" | ")
+        : "Teacher noted this in the main feedback field.");
+    const whatToChange =
+      parsed.data.whatToChange?.trim() ||
+      (parsed.data.starRating <= 2
+        ? parsed.data.lowRatingSupport || "Need a simpler, clearer next version."
+        : "Apply the AI coaching tips in the next lesson.");
 
     const coaching =
       (await generateReflectionCoachingWithClaude({

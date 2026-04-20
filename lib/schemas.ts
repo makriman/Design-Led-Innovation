@@ -89,6 +89,9 @@ export const ReflectionSchema = z.object({
   gameName: z.string().min(1).max(120),
   starRating: z.number().int().min(1).max(5),
   teacherFeedback: z.string().trim().min(3).max(3000).optional(),
+  lowRatingReason: z.string().trim().min(3).max(200).optional(),
+  lowRatingContext: z.string().trim().min(3).max(200).optional(),
+  lowRatingSupport: z.string().trim().min(3).max(200).optional(),
   whatWorked: z.string().trim().min(3).max(3000).optional(),
   whatFlopped: z.string().trim().min(3).max(3000).optional(),
   whatToChange: z.string().trim().min(3).max(3000).optional(),
@@ -101,6 +104,30 @@ export const ReflectionSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "Provide teacherFeedback or the legacy worked/flopped/change fields.",
     });
+  }
+
+  if (value.starRating <= 2) {
+    if (!value.lowRatingReason?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["lowRatingReason"],
+        message: "Low ratings require main issue selection.",
+      });
+    }
+    if (!value.lowRatingContext?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["lowRatingContext"],
+        message: "Low ratings require classroom factor selection.",
+      });
+    }
+    if (!value.lowRatingSupport?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["lowRatingSupport"],
+        message: "Low ratings require support selection.",
+      });
+    }
   }
 });
 
