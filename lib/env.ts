@@ -11,12 +11,20 @@ function resolveAnthropicModel(): string {
   return configuredModel || "claude-3-5-sonnet-latest";
 }
 
+function resolveAnthropicFeedbackModel(): string {
+  const configuredModel = process.env.ANTHROPIC_FEEDBACK_MODEL?.trim();
+  return configuredModel || "claude-3-5-haiku-latest";
+}
+
 export const env = {
   get anthropicApiKey() {
     return requireEnv("ANTHROPIC_API_KEY").trim();
   },
   get anthropicModel() {
     return resolveAnthropicModel();
+  },
+  get anthropicFeedbackModel() {
+    return resolveAnthropicFeedbackModel();
   },
   get databaseUrl() {
     return requireEnv("DATABASE_URL").trim();

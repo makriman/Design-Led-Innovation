@@ -121,6 +121,7 @@ function errorToText(error: unknown) {
 
 type CachedCallParams<T> = {
   operation: string;
+  model: string;
   promptVersion: string;
   cacheKey: string;
   requestPayload: unknown;
@@ -146,7 +147,7 @@ async function readCachedResponse<T>(params: CachedCallParams<T>) {
       cacheKey: params.cacheKey,
       cacheHit: true,
       bypassCache: false,
-      model: env.anthropicModel,
+      model: params.model,
       promptVersion: params.promptVersion,
       requestJson: params.requestPayload,
       responseJson: parsed,
@@ -159,7 +160,7 @@ async function readCachedResponse<T>(params: CachedCallParams<T>) {
       cacheKey: params.cacheKey,
       cacheHit: true,
       bypassCache: false,
-      model: env.anthropicModel,
+      model: params.model,
       promptVersion: params.promptVersion,
       requestJson: params.requestPayload,
       responseJson: null,
@@ -174,6 +175,7 @@ export async function generateGamesWithClaude(
   input: GenerateRequestInput,
   options: { bypassCache?: boolean } = {}
 ) {
+  const model = env.anthropicModel;
   const topic = input.topic?.trim();
   const perGameMinutes = Math.max(4, Math.floor(input.durationMinutes / 3));
   const operation = "generate_games";
@@ -187,13 +189,14 @@ export async function generateGamesWithClaude(
   };
   const cacheKey = createCacheKey({
     operation,
-    model: env.anthropicModel,
+    model,
     promptVersion,
     payload: cachePayload,
   });
 
   const cached = await readCachedResponse({
     operation,
+    model,
     promptVersion,
     cacheKey,
     requestPayload: cachePayload,
@@ -253,7 +256,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
 
     try {
       const response = await getAnthropicClient().messages.create({
-        model: env.anthropicModel,
+        model,
         max_tokens: 4000,
         temperature: 0.35,
         system: systemPrompt,
@@ -266,7 +269,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
       await upsertAiCacheEntry({
         cacheKey,
         operation,
-        model: env.anthropicModel,
+        model,
         promptVersion,
         requestJson: cachePayload,
         responseJson: parsed,
@@ -277,7 +280,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
         cacheKey,
         cacheHit: false,
         bypassCache: options.bypassCache === true,
-        model: env.anthropicModel,
+        model,
         promptVersion,
         requestJson: requestPayload,
         responseJson: parsed,
@@ -293,7 +296,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
         cacheKey,
         cacheHit: false,
         bypassCache: options.bypassCache === true,
-        model: env.anthropicModel,
+        model,
         promptVersion,
         requestJson: requestPayload,
         responseJson: null,
@@ -310,6 +313,7 @@ export async function generateInsightsWithClaude(
   reflections: ReflectionRow[],
   options: { bypassCache?: boolean } = {}
 ) {
+  const model = env.anthropicModel;
   if (reflections.length < 3) {
     return {
       patterns: [],
@@ -356,13 +360,14 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
   };
   const cacheKey = createCacheKey({
     operation,
-    model: env.anthropicModel,
+    model,
     promptVersion,
     payload: cachePayload,
   });
 
   const cached = await readCachedResponse({
     operation,
+    model,
     promptVersion,
     cacheKey,
     requestPayload: cachePayload,
@@ -384,7 +389,7 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
 
   try {
     const response = await getAnthropicClient().messages.create({
-      model: env.anthropicModel,
+      model,
       max_tokens: 2000,
       temperature: 0.5,
       system: insightsSystemPrompt,
@@ -396,7 +401,7 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
     await upsertAiCacheEntry({
       cacheKey,
       operation,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: cachePayload,
       responseJson: parsed,
@@ -407,7 +412,7 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
       cacheKey,
       cacheHit: false,
       bypassCache: options.bypassCache === true,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: requestPayload,
       responseJson: parsed,
@@ -421,7 +426,7 @@ If there are fewer than 3 reflections, return an empty patterns array and a frie
       cacheKey,
       cacheHit: false,
       bypassCache: options.bypassCache === true,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: requestPayload,
       responseJson: null,
@@ -440,6 +445,7 @@ export async function generateReflectionCoachingWithClaude(
   },
   options: { bypassCache?: boolean } = {}
 ) {
+  const model = env.anthropicFeedbackModel;
   const userPrompt = `Teacher reflection for one game:
 
 Game name: ${input.gameName}
@@ -456,7 +462,8 @@ Return ONLY valid JSON:
 Rules:
 - summary: one short supportive sentence.
 - tips: 2 to 4 concrete tips for next class, no paid resources.
-- futurePlanNote: explicitly state that future plans will improve using this feedback.`;
+- futurePlanNote: explicitly state that future plans will improve using this feedback.
+- keep all text concise and practical.`;
 
   const operation = "generate_reflection_coaching";
   const promptVersion = PROMPT_VERSIONS.reflectionCoaching;
@@ -467,13 +474,14 @@ Rules:
   };
   const cacheKey = createCacheKey({
     operation,
-    model: env.anthropicModel,
+    model,
     promptVersion,
     payload: cachePayload,
   });
 
   const cached = await readCachedResponse({
     operation,
+    model,
     promptVersion,
     cacheKey,
     requestPayload: cachePayload,
@@ -490,13 +498,13 @@ Rules:
     systemPrompt: reflectionCoachSystemPrompt,
     userPrompt,
     temperature: 0.4,
-    maxTokens: 1200,
+    maxTokens: 500,
   };
 
   try {
     const response = await getAnthropicClient().messages.create({
-      model: env.anthropicModel,
-      max_tokens: 1200,
+      model,
+      max_tokens: 500,
       temperature: 0.4,
       system: reflectionCoachSystemPrompt,
       messages: [{ role: "user", content: userPrompt }],
@@ -507,7 +515,7 @@ Rules:
     await upsertAiCacheEntry({
       cacheKey,
       operation,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: cachePayload,
       responseJson: parsed,
@@ -518,7 +526,7 @@ Rules:
       cacheKey,
       cacheHit: false,
       bypassCache: options.bypassCache === true,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: requestPayload,
       responseJson: parsed,
@@ -532,7 +540,7 @@ Rules:
       cacheKey,
       cacheHit: false,
       bypassCache: options.bypassCache === true,
-      model: env.anthropicModel,
+      model,
       promptVersion,
       requestJson: requestPayload,
       responseJson: null,

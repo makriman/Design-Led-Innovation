@@ -10,7 +10,7 @@ Inspire is a Next.js app for primary school teachers in Sub-Saharan Africa. Teac
 - Tailwind CSS + shadcn-style UI components
 - Neon Postgres via `DATABASE_URL` (Vercel Marketplace friendly)
 - Single passcode unlock via scrypt hash + JWT session cookie (`httpOnly`, 12h TTL)
-- Anthropic Messages API (`claude-sonnet-4-6` by default, configurable)
+- Anthropic Messages API (Sonnet for lesson generation, Haiku for reflection coaching by default)
 - Zod validation
 - lucide-react icons
 
@@ -44,7 +44,8 @@ cp .env.local.example .env.local
 
 ```env
 ANTHROPIC_API_KEY=your-anthropic-api-key
-ANTHROPIC_MODEL=claude-sonnet-4-6
+ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+ANTHROPIC_FEEDBACK_MODEL=claude-3-5-haiku-latest
 DATABASE_URL=postgres://user:pass@host/db?sslmode=require
 APP_PASSCODE_HASH=scrypt$your-random-salt$your-derived-hex-hash
 SESSION_SECRET=change-me-to-a-long-random-string
