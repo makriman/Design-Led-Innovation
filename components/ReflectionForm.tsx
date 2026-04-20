@@ -120,10 +120,10 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
             {isSaving ? (
               <span className="inline-flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Saving and generating coaching...
+                Submitting feedback...
               </span>
             ) : (
-              "Get AI coaching"
+              "Submit feedback"
             )}
           </Button>
         </form>

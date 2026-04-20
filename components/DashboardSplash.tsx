@@ -61,7 +61,8 @@ export function DashboardSplash() {
         <span className={`${styles.dot} ${styles.dotRight}`} aria-hidden="true" />
       </div>
       <p className={styles.missionStatement}>
-        <span>Design joyful, practical lessons for real classrooms, reflect on what happened, and improve.</span>
+        <span>Making Learning Fun</span>
+        <span>for Everyone</span>
       </p>
     </div>
   );

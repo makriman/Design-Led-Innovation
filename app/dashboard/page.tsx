@@ -21,14 +21,6 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div
-        className="h-1.5 rounded-full"
-        style={{
-          background:
-            "repeating-linear-gradient(90deg, #f5a623 0px, #f5a623 18px, #c0522a 18px, #c0522a 32px, #3d7a5e 32px, #3d7a5e 46px, #1a1aff 46px, #1a1aff 60px, #f5a623 60px, #f5a623 78px, #0d0d0d 78px, #0d0d0d 84px)",
-        }}
-      />
-
       <div className="grid gap-3 sm:grid-cols-3">
         <ActionTile
           href="#generate-plan"
