@@ -1,32 +1,28 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE_NAME, verifyAuthToken } from "@/lib/auth";
-import db from "@/lib/db";
+import { AUTH_COOKIE_NAME, isUnlockedToken } from "@/lib/auth";
 
-export async function getSessionUser() {
+const SINGLE_USER = {
+  id: 1,
+  username: "Teacher",
+} as const;
+
+export async function isSessionUnlocked() {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  return isUnlockedToken(token);
+}
 
-  if (!token) {
-    return null;
+export async function getSessionUser() {
+  if (await isSessionUnlocked()) {
+    return SINGLE_USER;
   }
-
-  const payload = verifyAuthToken(token);
-  if (!payload) {
-    return null;
-  }
-
-  const user = db.prepare("SELECT id, username FROM users WHERE id = ?").get(payload.userId) as
-    | { id: number; username: string }
-    | undefined;
-
-  return user ?? null;
+  return null;
 }
 
 export async function requireSessionUser() {
-  const user = await getSessionUser();
-  if (!user) {
-    redirect("/login");
+  if (!(await isSessionUnlocked())) {
+    redirect("/unlock");
   }
-  return user;
+  return SINGLE_USER;
 }

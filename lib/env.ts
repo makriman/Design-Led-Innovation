@@ -6,7 +6,15 @@ function requireEnv(name: string): string {
   return value;
 }
 
+function resolveAnthropicModel(): string {
+  const configuredModel = process.env.ANTHROPIC_MODEL?.trim();
+  return configuredModel || "claude-sonnet-4-6";
+}
+
 export const env = {
   anthropicApiKey: requireEnv("ANTHROPIC_API_KEY"),
-  jwtSecret: requireEnv("JWT_SECRET"),
+  anthropicModel: resolveAnthropicModel(),
+  databaseUrl: requireEnv("DATABASE_URL"),
+  appPasscodeHash: requireEnv("APP_PASSCODE_HASH"),
+  sessionSecret: process.env.SESSION_SECRET || process.env.JWT_SECRET || requireEnv("SESSION_SECRET"),
 };

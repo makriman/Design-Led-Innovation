@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { GameCard } from "@/components/GameCard";
-import db, { parseLessonGames, type LessonRow } from "@/lib/db";
+import { getLessonById, parseLessonGames } from "@/lib/db";
+import { getGameImageUrl } from "@/lib/game-images";
 import { requireSessionUser } from "@/lib/server-auth";
 
 type GeneratePageProps = {
@@ -9,11 +10,8 @@ type GeneratePageProps = {
 
 export default async function GenerateResultPage({ params }: GeneratePageProps) {
   const { id } = await params;
-  const user = await requireSessionUser();
-
-  const lesson = db
-    .prepare("SELECT * FROM lessons WHERE id = ? AND user_id = ?")
-    .get(Number(id), user.id) as LessonRow | undefined;
+  await requireSessionUser();
+  const lesson = await getLessonById(Number(id));
 
   if (!lesson) {
     notFound();
@@ -24,13 +22,23 @@ export default async function GenerateResultPage({ params }: GeneratePageProps) 
   return (
     <section className="space-y-5">
       <div className="no-print">
-        <h1 className="text-3xl font-bold">Your 3 Games Are Ready</h1>
-        <p className="text-lg text-slate-700">Tap a game to run, print, or reflect after class.</p>
+        <h1 className="text-3xl font-black tracking-tight text-slate-900">Your 3 learning games are ready</h1>
+        <p className="text-sm text-slate-500">Browse them like listings, open details, and log feedback after class.</p>
       </div>
 
-      {games.map((game, index) => (
-        <GameCard key={`${lesson.id}-${index}`} lessonId={lesson.id} gameIndex={index} initialGame={game} />
-      ))}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {games.map((game, index) => (
+          <GameCard
+            key={`${lesson.id}-${index}`}
+            lessonId={lesson.id}
+            gameIndex={index}
+            initialGame={game}
+            imageUrl={getGameImageUrl(lesson.subject, index)}
+            subject={lesson.subject}
+            grade={lesson.grade}
+          />
+        ))}
+      </div>
     </section>
   );
 }

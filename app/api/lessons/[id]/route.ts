@@ -1,33 +1,30 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import db, { parseLessonGames, type LessonRow, type ReflectionRow } from "@/lib/db";
-import { AUTH_COOKIE_NAME, requireApiUserFromCookie } from "@/lib/auth";
+import { getLessonById, getReflectionsByLessonId, parseLessonGames } from "@/lib/db";
+import { AUTH_COOKIE_NAME, requireUnlockedApiFromCookie } from "@/lib/auth";
 
 type LessonRouteProps = {
   params: Promise<{ id: string }>;
 };
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: Request, { params }: LessonRouteProps) {
   const cookieStore = await cookies();
-  const user = await requireApiUserFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
-
-  if (!user) {
+  const unlocked = requireUnlockedApiFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  if (!unlocked) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await params;
 
-  const lesson = db
-    .prepare("SELECT * FROM lessons WHERE id = ? AND user_id = ?")
-    .get(Number(id), user.id) as LessonRow | undefined;
-
+  const lesson = await getLessonById(Number(id));
   if (!lesson) {
     return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
   }
 
-  const reflections = db
-    .prepare("SELECT * FROM reflections WHERE user_id = ? AND lesson_id = ? ORDER BY created_at DESC")
-    .all(user.id, lesson.id) as ReflectionRow[];
+  const reflections = await getReflectionsByLessonId(lesson.id);
 
   return NextResponse.json({
     lesson: {

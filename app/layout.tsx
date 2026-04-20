@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "@/app/globals.css";
-import "@/lib/env";
-import "@/lib/db";
 import { Header } from "@/components/Header";
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   display: "swap",
 });
@@ -22,9 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-neutral/40 text-foreground`}>
+      <body className={`${dmSans.className} bg-neutral text-foreground`}>
         <Header />
-        <main className="mx-auto w-full max-w-5xl px-4 py-6">{children}</main>
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8">{children}</main>
       </body>
     </html>
   );

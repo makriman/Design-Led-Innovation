@@ -1,33 +1,51 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import db, { parseLessonGames, type LessonRow } from "@/lib/db";
-import { AUTH_COOKIE_NAME, requireApiUserFromCookie } from "@/lib/auth";
+import {
+  getReflectedGameIndicesByLessonIds,
+  listLessonsPage,
+  parseLessonGames,
+} from "@/lib/db";
+import { AUTH_COOKIE_NAME, requireUnlockedApiFromCookie } from "@/lib/auth";
 
-export async function GET() {
+const DEFAULT_LIMIT = 9;
+const MAX_LIMIT = 24;
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(request: Request) {
   const cookieStore = await cookies();
-  const user = await requireApiUserFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
-
-  if (!user) {
+  const unlocked = requireUnlockedApiFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  if (!unlocked) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const lessons = db
-    .prepare("SELECT * FROM lessons WHERE user_id = ? ORDER BY created_at DESC")
-    .all(user.id) as LessonRow[];
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get("q")?.trim() ?? "";
+  const cursorRaw = searchParams.get("cursor");
+  const limitRaw = searchParams.get("limit");
 
-  const reflectionRows = db
-    .prepare("SELECT lesson_id, game_index FROM reflections WHERE user_id = ?")
-    .all(user.id) as Array<{ lesson_id: number; game_index: number }>;
+  const limitNumber = limitRaw ? Number(limitRaw) : DEFAULT_LIMIT;
+  const limit = Number.isFinite(limitNumber)
+    ? Math.min(MAX_LIMIT, Math.max(1, Math.floor(limitNumber)))
+    : DEFAULT_LIMIT;
 
-  const reflectedMap = new Map<number, Set<number>>();
-  for (const row of reflectionRows) {
-    if (!reflectedMap.has(row.lesson_id)) {
-      reflectedMap.set(row.lesson_id, new Set<number>());
-    }
-    reflectedMap.get(row.lesson_id)?.add(row.game_index);
+  const cursor = cursorRaw && Number.isFinite(Number(cursorRaw)) ? Number(cursorRaw) : null;
+  const lessonPage = await listLessonsPage({ q, cursor, limit });
+  const pageLessons = lessonPage.lessons;
+  const lessonIds = pageLessons.map((lesson) => lesson.id);
+
+  if (lessonIds.length === 0) {
+    return NextResponse.json({
+      lessons: [],
+      nextCursor: null,
+      hasMore: false,
+    });
   }
 
-  const payload = lessons.map((lesson) => {
+  const reflectedMap = await getReflectedGameIndicesByLessonIds(lessonIds);
+
+  const payload = pageLessons.map((lesson) => {
     const games = parseLessonGames(lesson);
     const reflected = reflectedMap.get(lesson.id) ?? new Set<number>();
 
@@ -43,5 +61,9 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ lessons: payload });
+  return NextResponse.json({
+    lessons: payload,
+    hasMore: lessonPage.hasMore,
+    nextCursor: lessonPage.nextCursor,
+  });
 }

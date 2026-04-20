@@ -1,12 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Sparkles, Star } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+type CoachingResponse = {
+  summary: string;
+  tips: string[];
+  futurePlanNote: string;
+};
 
 type ReflectionFormProps = {
   lessonId: number;
@@ -15,27 +22,27 @@ type ReflectionFormProps = {
 };
 
 export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionFormProps) {
-  const router = useRouter();
-  const [step, setStep] = useState<"rating" | "feedback">("rating");
   const [starRating, setStarRating] = useState(0);
-  const [whatWorked, setWhatWorked] = useState("");
-  const [whatFlopped, setWhatFlopped] = useState("");
-  const [whatToChange, setWhatToChange] = useState("");
+  const [teacherFeedback, setTeacherFeedback] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function continueToFeedback() {
-    if (starRating < 1) {
-      setError("Please select a star rating first.");
-      return;
-    }
-    setError(null);
-    setStep("feedback");
-  }
+  const [coaching, setCoaching] = useState<CoachingResponse | null>(null);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setCoaching(null);
+
+    if (starRating < 1) {
+      setError("Please select a star rating first.");
+      return;
+    }
+
+    if (teacherFeedback.trim().length < 3) {
+      setError("Please share a quick note about how the game went.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -47,21 +54,17 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
           gameIndex,
           gameName,
           starRating,
-          whatWorked,
-          whatFlopped,
-          whatToChange,
+          teacherFeedback,
         }),
       });
 
-      const data = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
+      const data = (await response.json()) as { coaching?: CoachingResponse; error?: string };
+      if (!response.ok || !data.coaching) {
         setError(data.error ?? "Could not save reflection.");
         return;
       }
 
-      router.push("/insights");
-      router.refresh();
+      setCoaching(data.coaching);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -70,105 +73,85 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
   }
 
   return (
-    <Card className="mx-auto w-full max-w-3xl">
+    <Card className="mx-auto w-full max-w-3xl rounded-3xl border-slate-200">
       <CardHeader>
-        <CardTitle>Reflect on: {gameName}</CardTitle>
+        <CardTitle className="text-2xl font-black tracking-tight text-slate-900">I played: {gameName}</CardTitle>
+        <p className="text-sm text-slate-500">Share quick feedback and get AI coaching for next time.</p>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-5">
-          <div className="rounded-lg border border-border bg-neutral p-4">
-            <Label className="mb-3 text-lg">1. Star rating first</Label>
-            <p className="mb-3 text-base text-slate-700">How did this game go overall?</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <Label className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Star rating</Label>
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setStarRating(value)}
-                  className="rounded-md p-1 transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="rounded-md p-1 transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label={`${value} star${value === 1 ? "" : "s"}`}
                 >
-                  <Star
-                    className={`h-8 w-8 ${value <= starRating ? "fill-yellow-400 text-yellow-400" : "text-slate-400"}`}
-                  />
+                  <Star className={`h-8 w-8 ${value <= starRating ? "fill-amber-400 text-amber-400" : "text-slate-300"}`} />
                 </button>
               ))}
-              <span className="ml-2 text-base font-semibold text-primary">
+              <span className="ml-2 text-sm font-semibold text-slate-700">
                 {starRating > 0 ? `${starRating}/5` : "No rating yet"}
               </span>
             </div>
           </div>
 
-          {step === "rating" ? (
-            <Button type="button" variant="accent" size="lg" className="w-full" onClick={continueToFeedback}>
-              Continue to feedback
-            </Button>
-          ) : (
-            <>
-              <div className="rounded-lg border border-border p-4">
-                <Label className="mb-1 text-lg">2. Feedback</Label>
-                <p className="text-base text-slate-700">
-                  You picked <span className="font-semibold text-primary">{starRating}/5</span>. Add details below.
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="mt-2 px-0 text-base underline"
-                  onClick={() => setStep("rating")}
-                >
-                  Change rating
-                </Button>
-              </div>
+          <div>
+            <Label htmlFor="teacherFeedback" className="text-sm font-semibold text-slate-700">
+              How did it go?
+            </Label>
+            <Textarea
+              id="teacherFeedback"
+              required
+              value={teacherFeedback}
+              onChange={(event) => setTeacherFeedback(event.target.value)}
+              placeholder="What happened in class? What should change next time?"
+            />
+          </div>
 
-              <div>
-                <Label htmlFor="worked">What worked?</Label>
-                <Textarea
-                  id="worked"
-                  required
-                  value={whatWorked}
-                  onChange={(e) => setWhatWorked(e.target.value)}
-                  placeholder="What helped learners engage and understand?"
-                />
-              </div>
+          {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
 
-              <div>
-                <Label htmlFor="flopped">What flopped?</Label>
-                <Textarea
-                  id="flopped"
-                  required
-                  value={whatFlopped}
-                  onChange={(e) => setWhatFlopped(e.target.value)}
-                  placeholder="What did not go as planned?"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="change">What would you change next time?</Label>
-                <Textarea
-                  id="change"
-                  required
-                  value={whatToChange}
-                  onChange={(e) => setWhatToChange(e.target.value)}
-                  placeholder="One practical change for next class"
-                />
-              </div>
-            </>
-          )}
-
-          {error ? <p className="rounded-lg bg-red-50 p-3 text-base text-red-700">{error}</p> : null}
-
-          {step === "feedback" ? (
-            <Button type="submit" variant="accent" size="lg" className="w-full" disabled={isSaving}>
-              {isSaving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Saving reflection...
-                </span>
-              ) : (
-                "Save reflection"
-              )}
-            </Button>
-          ) : null}
+          <Button type="submit" variant="accent" size="lg" className="w-full rounded-2xl" disabled={isSaving}>
+            {isSaving ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving and generating coaching...
+              </span>
+            ) : (
+              "Get AI coaching"
+            )}
+          </Button>
         </form>
+
+        {coaching ? (
+          <section className="mt-6 space-y-4 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-primary">
+              <Sparkles className="h-4 w-4" />
+              AI coaching
+            </p>
+            <p className="text-sm text-slate-700">{coaching.summary}</p>
+            <ul className="list-disc space-y-1 pl-6 text-sm text-slate-700">
+              {coaching.tips.map((tip, index) => (
+                <li key={`${tip}-${index}`}>{tip}</li>
+              ))}
+            </ul>
+            <p className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-slate-700">{coaching.futurePlanNote}</p>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }), "rounded-xl")}>
+                Back to dashboard
+              </Link>
+              <Link href="/insights" className={cn(buttonVariants({ variant: "accent" }), "rounded-xl")}>
+                View insights
+              </Link>
+            </div>
+          </section>
+        ) : null}
       </CardContent>
     </Card>
   );

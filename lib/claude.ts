@@ -1,11 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createHash } from "node:crypto";
 import { env } from "@/lib/env";
 import {
+  createAiCallLog,
+  getAiCacheEntry,
+  type ReflectionRow,
+  upsertAiCacheEntry,
+} from "@/lib/db";
+import {
+  CoachingResponseSchema,
   GameGenerationResponseSchema,
   type GenerateRequestInput,
   InsightsResponseSchema,
 } from "@/lib/schemas";
-import type { ReflectionRow } from "@/lib/db";
 
 const anthropic = new Anthropic({
   apiKey: env.anthropicApiKey,
@@ -14,6 +21,13 @@ const anthropic = new Anthropic({
 const systemPrompt = `You are a curriculum designer for primary school teachers in Sub-Saharan Africa. You design play-based learning games that work in classrooms with 40-plus students, no electricity, no printers, and no internet. Materials must be items the teacher already has: chalk, blackboard, paper, stones, sticks, bottle caps, leaves, the children themselves, their voices, and their bodies. Never suggest printouts, worksheets that need copying, devices, videos, purchased toys, or any paid resource. Keep language simple. Assume English is a second or third language for the teacher. Use short sentences.`;
 
 const insightsSystemPrompt = `You are a gentle, practical coach for primary school teachers in Sub-Saharan Africa who are learning to use play-based learning. You read their reflections and spot patterns. You speak directly to the teacher in plain language. You give one concrete tip per pattern. You never lecture. You are encouraging but honest. Short sentences.`;
+const reflectionCoachSystemPrompt = `You are an encouraging classroom coach for primary teachers in Sub-Saharan Africa. You read one game reflection and give practical support for the next class. Keep language simple. Keep tips short and resource-free. Always include a note that future lesson plans will improve based on this feedback.`;
+
+const PROMPT_VERSIONS = {
+  generateGames: "generate-games-v1",
+  insights: "insights-v1",
+  reflectionCoaching: "reflection-coaching-v1",
+} as const;
 
 function extractTextFromClaudeResponse(content: Anthropic.Messages.ContentBlock[]): string {
   return content
@@ -36,9 +50,127 @@ function parseJsonObject(text: string): unknown {
   }
 }
 
-export async function generateGamesWithClaude(input: GenerateRequestInput) {
+function normalizeForCache(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeForCache);
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, entryValue]) => [key, normalizeForCache(entryValue)]);
+    return Object.fromEntries(entries);
+  }
+
+  return value;
+}
+
+function createCacheKey(params: {
+  operation: string;
+  model: string;
+  promptVersion: string;
+  payload: unknown;
+}) {
+  const normalizedPayload = normalizeForCache(params.payload);
+  const payloadText = JSON.stringify(normalizedPayload);
+  const hash = createHash("sha256")
+    .update(`${params.operation}:${params.model}:${params.promptVersion}:${payloadText}`)
+    .digest("hex");
+  return `${params.operation}:${params.model}:${params.promptVersion}:${hash}`;
+}
+
+function errorToText(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+type CachedCallParams<T> = {
+  operation: string;
+  promptVersion: string;
+  cacheKey: string;
+  requestPayload: unknown;
+  bypassCache: boolean;
+  parser: (value: unknown) => T;
+};
+
+async function readCachedResponse<T>(params: CachedCallParams<T>) {
+  if (params.bypassCache) {
+    return null;
+  }
+
+  const startedAt = Date.now();
+  const cached = await getAiCacheEntry<unknown>(params.cacheKey);
+  if (!cached) {
+    return null;
+  }
+
+  try {
+    const parsed = params.parser(cached.response);
+    await createAiCallLog({
+      operation: params.operation,
+      cacheKey: params.cacheKey,
+      cacheHit: true,
+      bypassCache: false,
+      model: env.anthropicModel,
+      promptVersion: params.promptVersion,
+      requestJson: params.requestPayload,
+      responseJson: parsed,
+      durationMs: Date.now() - startedAt,
+    });
+    return parsed;
+  } catch (error) {
+    await createAiCallLog({
+      operation: params.operation,
+      cacheKey: params.cacheKey,
+      cacheHit: true,
+      bypassCache: false,
+      model: env.anthropicModel,
+      promptVersion: params.promptVersion,
+      requestJson: params.requestPayload,
+      responseJson: null,
+      errorText: `Cached payload parse failed: ${errorToText(error)}`,
+      durationMs: Date.now() - startedAt,
+    });
+    return null;
+  }
+}
+
+export async function generateGamesWithClaude(
+  input: GenerateRequestInput,
+  options: { bypassCache?: boolean } = {}
+) {
   const topic = input.topic?.trim();
   const perGameMinutes = Math.max(4, Math.floor(input.durationMinutes / 3));
+  const operation = "generate_games";
+  const promptVersion = PROMPT_VERSIONS.generateGames;
+  const cachePayload = {
+    grade: input.grade,
+    studentCount: input.studentCount,
+    subject: input.subject,
+    topic: topic || "",
+    durationMinutes: input.durationMinutes,
+  };
+  const cacheKey = createCacheKey({
+    operation,
+    model: env.anthropicModel,
+    promptVersion,
+    payload: cachePayload,
+  });
+
+  const cached = await readCachedResponse({
+    operation,
+    promptVersion,
+    cacheKey,
+    requestPayload: cachePayload,
+    bypassCache: options.bypassCache === true,
+    parser: (value) => GameGenerationResponseSchema.parse(value),
+  });
+  if (cached) {
+    return cached;
+  }
 
   const userPrompt = `Design 3 different play-based learning games for:
 - Grade: ${input.grade}
@@ -76,9 +208,19 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
         ? ""
         : "\n\nYour previous output was invalid. Retry and obey every schema/material rule exactly.";
 
+    const startedAt = Date.now();
+    const requestPayload = {
+      ...cachePayload,
+      attempt,
+      systemPrompt,
+      userPrompt: `${userPrompt}${retryNote}`,
+      temperature: 0.7,
+      maxTokens: 4000,
+    };
+
     try {
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+        model: env.anthropicModel,
         max_tokens: 4000,
         temperature: 0.7,
         system: systemPrompt,
@@ -86,17 +228,54 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
       });
 
       const rawText = extractTextFromClaudeResponse(response.content);
-      const parsed = parseJsonObject(rawText);
-      return GameGenerationResponseSchema.parse(parsed);
+      const parsed = GameGenerationResponseSchema.parse(parseJsonObject(rawText));
+
+      await upsertAiCacheEntry({
+        cacheKey,
+        operation,
+        model: env.anthropicModel,
+        promptVersion,
+        requestJson: cachePayload,
+        responseJson: parsed,
+      });
+
+      await createAiCallLog({
+        operation,
+        cacheKey,
+        cacheHit: false,
+        bypassCache: options.bypassCache === true,
+        model: env.anthropicModel,
+        promptVersion,
+        requestJson: requestPayload,
+        responseJson: parsed,
+        durationMs: Date.now() - startedAt,
+      });
+
+      return parsed;
     } catch (error) {
       lastError = error;
+      await createAiCallLog({
+        operation,
+        cacheKey,
+        cacheHit: false,
+        bypassCache: options.bypassCache === true,
+        model: env.anthropicModel,
+        promptVersion,
+        requestJson: requestPayload,
+        responseJson: null,
+        errorText: errorToText(error),
+        durationMs: Date.now() - startedAt,
+      });
     }
   }
 
   throw lastError instanceof Error ? lastError : new Error("Failed to generate valid games");
 }
 
-export async function generateInsightsWithClaude(reflections: ReflectionRow[]) {
+export async function generateInsightsWithClaude(
+  reflections: ReflectionRow[],
+  options: { bypassCache?: boolean } = {}
+) {
   if (reflections.length < 3) {
     return {
       patterns: [],
@@ -104,12 +283,17 @@ export async function generateInsightsWithClaude(reflections: ReflectionRow[]) {
     };
   }
 
-  const reflectionsText = reflections
+  const reflectionsForPrompt = reflections.map((reflection) => ({
+    gameName: reflection.game_name,
+    rating: reflection.star_rating,
+    teacherFeedback: reflection.teacher_feedback || `${reflection.what_worked} | ${reflection.what_flopped} | ${reflection.what_to_change}`,
+  }));
+
+  const reflectionsText = reflectionsForPrompt
     .map(
-      (r, i) => `${i + 1}. Game: ${r.game_name}
-   What worked: ${r.what_worked}
-   What flopped: ${r.what_flopped}
-   What to change: ${r.what_to_change}`
+      (reflection, index) => `${index + 1}. Game: ${reflection.gameName}
+   Rating: ${reflection.rating}/5
+   Teacher feedback: ${reflection.teacherFeedback}`
     )
     .join("\n\n");
 
@@ -131,15 +315,196 @@ Return ONLY valid JSON:
 
 If there are fewer than 3 reflections, return an empty patterns array and a friendly note in a "message" field asking the teacher to log a few more reflections first.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
-    max_tokens: 2000,
-    temperature: 0.5,
-    system: insightsSystemPrompt,
-    messages: [{ role: "user", content: insightsUserPrompt }],
+  const operation = "generate_insights";
+  const promptVersion = PROMPT_VERSIONS.insights;
+  const cachePayload = {
+    reflections: reflectionsForPrompt,
+  };
+  const cacheKey = createCacheKey({
+    operation,
+    model: env.anthropicModel,
+    promptVersion,
+    payload: cachePayload,
   });
 
-  const rawText = extractTextFromClaudeResponse(response.content);
-  const parsed = parseJsonObject(rawText);
-  return InsightsResponseSchema.parse(parsed);
+  const cached = await readCachedResponse({
+    operation,
+    promptVersion,
+    cacheKey,
+    requestPayload: cachePayload,
+    bypassCache: options.bypassCache === true,
+    parser: (value) => InsightsResponseSchema.parse(value),
+  });
+  if (cached) {
+    return cached;
+  }
+
+  const startedAt = Date.now();
+  const requestPayload = {
+    ...cachePayload,
+    systemPrompt: insightsSystemPrompt,
+    userPrompt: insightsUserPrompt,
+    temperature: 0.5,
+    maxTokens: 2000,
+  };
+
+  try {
+    const response = await anthropic.messages.create({
+      model: env.anthropicModel,
+      max_tokens: 2000,
+      temperature: 0.5,
+      system: insightsSystemPrompt,
+      messages: [{ role: "user", content: insightsUserPrompt }],
+    });
+
+    const parsed = InsightsResponseSchema.parse(parseJsonObject(extractTextFromClaudeResponse(response.content)));
+
+    await upsertAiCacheEntry({
+      cacheKey,
+      operation,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: cachePayload,
+      responseJson: parsed,
+    });
+
+    await createAiCallLog({
+      operation,
+      cacheKey,
+      cacheHit: false,
+      bypassCache: options.bypassCache === true,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: requestPayload,
+      responseJson: parsed,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return parsed;
+  } catch (error) {
+    await createAiCallLog({
+      operation,
+      cacheKey,
+      cacheHit: false,
+      bypassCache: options.bypassCache === true,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: requestPayload,
+      responseJson: null,
+      errorText: errorToText(error),
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
+}
+
+export async function generateReflectionCoachingWithClaude(
+  input: {
+    gameName: string;
+    starRating: number;
+    teacherFeedback: string;
+  },
+  options: { bypassCache?: boolean } = {}
+) {
+  const userPrompt = `Teacher reflection for one game:
+
+Game name: ${input.gameName}
+Rating: ${input.starRating}/5
+Teacher notes: ${input.teacherFeedback}
+
+Return ONLY valid JSON:
+{
+  "summary": "string",
+  "tips": ["string", "string"],
+  "futurePlanNote": "string"
+}
+
+Rules:
+- summary: one short supportive sentence.
+- tips: 2 to 4 concrete tips for next class, no paid resources.
+- futurePlanNote: explicitly state that future plans will improve using this feedback.`;
+
+  const operation = "generate_reflection_coaching";
+  const promptVersion = PROMPT_VERSIONS.reflectionCoaching;
+  const cachePayload = {
+    gameName: input.gameName,
+    starRating: input.starRating,
+    teacherFeedback: input.teacherFeedback.trim(),
+  };
+  const cacheKey = createCacheKey({
+    operation,
+    model: env.anthropicModel,
+    promptVersion,
+    payload: cachePayload,
+  });
+
+  const cached = await readCachedResponse({
+    operation,
+    promptVersion,
+    cacheKey,
+    requestPayload: cachePayload,
+    bypassCache: options.bypassCache === true,
+    parser: (value) => CoachingResponseSchema.parse(value),
+  });
+  if (cached) {
+    return cached;
+  }
+
+  const startedAt = Date.now();
+  const requestPayload = {
+    ...cachePayload,
+    systemPrompt: reflectionCoachSystemPrompt,
+    userPrompt,
+    temperature: 0.4,
+    maxTokens: 1200,
+  };
+
+  try {
+    const response = await anthropic.messages.create({
+      model: env.anthropicModel,
+      max_tokens: 1200,
+      temperature: 0.4,
+      system: reflectionCoachSystemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+
+    const parsed = CoachingResponseSchema.parse(parseJsonObject(extractTextFromClaudeResponse(response.content)));
+
+    await upsertAiCacheEntry({
+      cacheKey,
+      operation,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: cachePayload,
+      responseJson: parsed,
+    });
+
+    await createAiCallLog({
+      operation,
+      cacheKey,
+      cacheHit: false,
+      bypassCache: options.bypassCache === true,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: requestPayload,
+      responseJson: parsed,
+      durationMs: Date.now() - startedAt,
+    });
+
+    return parsed;
+  } catch (error) {
+    await createAiCallLog({
+      operation,
+      cacheKey,
+      cacheHit: false,
+      bypassCache: options.bypassCache === true,
+      model: env.anthropicModel,
+      promptVersion,
+      requestJson: requestPayload,
+      responseJson: null,
+      errorText: errorToText(error),
+      durationMs: Date.now() - startedAt,
+    });
+    throw error;
+  }
 }

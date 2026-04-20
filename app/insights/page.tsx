@@ -2,7 +2,12 @@ import { PatternCard } from "@/components/PatternCard";
 import { RefreshInsightsButton } from "@/components/RefreshInsightsButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import db, { getLatestInsightsCache, type ReflectionRow } from "@/lib/db";
+import {
+  getAllReflections,
+  getLatestInsightsSnapshot,
+  getLessonCount,
+  type ReflectionRow,
+} from "@/lib/db";
 import { requireSessionUser } from "@/lib/server-auth";
 
 function calculateStreak(reflections: ReflectionRow[]) {
@@ -30,18 +35,13 @@ function calculateStreak(reflections: ReflectionRow[]) {
 }
 
 export default async function InsightsPage() {
-  const user = await requireSessionUser();
+  await requireSessionUser();
 
-  const totalLessons = db.prepare("SELECT COUNT(*) as count FROM lessons WHERE user_id = ?").get(user.id) as {
-    count: number;
-  };
-
-  const reflections = db
-    .prepare("SELECT * FROM reflections WHERE user_id = ? ORDER BY created_at DESC")
-    .all(user.id) as ReflectionRow[];
+  const totalLessons = await getLessonCount();
+  const reflections = (await getAllReflections()) as ReflectionRow[];
 
   const recentReflections = reflections.slice(0, 5);
-  const insightsCache = getLatestInsightsCache(user.id);
+  const insightsCache = await getLatestInsightsSnapshot();
 
   const totalGamesRun = reflections.length;
   const totalReflections = reflections.length;
@@ -89,7 +89,7 @@ export default async function InsightsPage() {
       <section className="space-y-3">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold">Patterns Inspire noticed</h2>
-          <Badge>Lessons: {totalLessons.count}</Badge>
+          <Badge>Lessons: {totalLessons}</Badge>
         </div>
 
         {insightsCache ? (
@@ -148,12 +148,20 @@ export default async function InsightsPage() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-2 text-base text-slate-800">
-                  <p>
-                    <span className="font-semibold text-primary">Worked:</span> {reflection.what_worked}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-primary">Flopped:</span> {reflection.what_flopped}
-                  </p>
+                  {reflection.teacher_feedback ? (
+                    <p>
+                      <span className="font-semibold text-primary">Teacher feedback:</span> {reflection.teacher_feedback}
+                    </p>
+                  ) : (
+                    <>
+                      <p>
+                        <span className="font-semibold text-primary">Worked:</span> {reflection.what_worked}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-primary">Flopped:</span> {reflection.what_flopped}
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ))}

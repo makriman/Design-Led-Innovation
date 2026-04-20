@@ -7,8 +7,8 @@ export function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+    await fetch("/api/unlock/logout", { method: "POST" });
+    router.push("/unlock");
     router.refresh();
   }
 

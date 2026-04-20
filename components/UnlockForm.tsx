@@ -1,18 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function LoginPage() {
+export function UnlockForm() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,15 +20,15 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("/api/unlock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ passcode }),
       });
 
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
-        setError(data.error ?? "Login failed.");
+        setError(data.error ?? "Could not unlock the app.");
         return;
       }
 
@@ -47,24 +45,25 @@ export default function LoginPage() {
     <section className="mx-auto max-w-xl">
       <Card>
         <CardHeader>
-          <CardTitle>Log in</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <LockKeyhole className="h-5 w-5 text-primary" />
+            Enter Passcode
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-5">
             <div>
-              <Label htmlFor="username">Username</Label>
-              <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-            </div>
-
-            <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="passcode">Passcode</Label>
               <Input
-                id="password"
+                id="passcode"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                inputMode="numeric"
+                autoComplete="off"
+                value={passcode}
+                onChange={(event) => setPasscode(event.target.value)}
                 required
               />
+              <p className="mt-2 text-sm text-slate-500">Unlock stays active for 12 hours on this browser.</p>
             </div>
 
             {error ? <p className="rounded-lg bg-red-50 p-3 text-base text-red-700">{error}</p> : null}
@@ -72,19 +71,12 @@ export default function LoginPage() {
             <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Logging in...
+                  <Loader2 className="h-5 w-5 animate-spin" /> Unlocking...
                 </span>
               ) : (
-                "Log in"
+                "Unlock Inspire"
               )}
             </Button>
-
-            <p className="text-base text-slate-700">
-              New here?{" "}
-              <Link href="/signup" className="font-semibold text-primary underline">
-                Create account
-              </Link>
-            </p>
           </form>
         </CardContent>
       </Card>

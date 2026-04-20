@@ -19,9 +19,8 @@ const bannedMaterialPatterns = [
   /toy|purchase|buy|paid|cost/,
 ];
 
-export const AuthSchema = z.object({
-  username: z.string().min(3).max(40).trim(),
-  password: z.string().min(6).max(128),
+export const UnlockSchema = z.object({
+  passcode: z.string().trim().min(1).max(64),
 });
 
 export const GenerateRequestSchema = z.object({
@@ -33,15 +32,16 @@ export const GenerateRequestSchema = z.object({
     "Grade 5",
     "Grade 6",
     "Grade 7",
+    "Grade 8",
   ]),
   studentCount: z.number().int().min(10).max(120),
   subject: z.enum([
     "Maths",
+    "History",
+    "Chemistry",
+    "Physics",
     "English",
-    "Science",
-    "Social Studies",
-    "Local Language",
-    "Life Skills",
+    "Social Sciences",
   ]),
   topic: z.string().trim().max(100).optional().or(z.literal("")),
   durationMinutes: z.number().int().refine((val) => [15, 30, 45].includes(val), {
@@ -88,9 +88,26 @@ export const ReflectionSchema = z.object({
   gameIndex: z.number().int().min(0).max(2),
   gameName: z.string().min(1).max(120),
   starRating: z.number().int().min(1).max(5),
-  whatWorked: z.string().trim().min(3).max(3000),
-  whatFlopped: z.string().trim().min(3).max(3000),
-  whatToChange: z.string().trim().min(3).max(3000),
+  teacherFeedback: z.string().trim().min(3).max(3000).optional(),
+  whatWorked: z.string().trim().min(3).max(3000).optional(),
+  whatFlopped: z.string().trim().min(3).max(3000).optional(),
+  whatToChange: z.string().trim().min(3).max(3000).optional(),
+}).superRefine((value, context) => {
+  const hasTeacherFeedback = Boolean(value.teacherFeedback?.trim());
+  const hasLegacyFeedback = Boolean(value.whatWorked?.trim() && value.whatFlopped?.trim() && value.whatToChange?.trim());
+
+  if (!hasTeacherFeedback && !hasLegacyFeedback) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide teacherFeedback or the legacy worked/flopped/change fields.",
+    });
+  }
+});
+
+export const CoachingResponseSchema = z.object({
+  summary: z.string().min(4).max(400),
+  tips: z.array(z.string().min(4).max(220)).min(2).max(4),
+  futurePlanNote: z.string().min(4).max(240),
 });
 
 export const InsightPatternSchema = z.object({
@@ -107,9 +124,10 @@ export const RefreshInsightsSchema = z.object({
   forceRefresh: z.boolean().optional().default(false),
 });
 
-export type AuthInput = z.infer<typeof AuthSchema>;
+export type UnlockInput = z.infer<typeof UnlockSchema>;
 export type GenerateRequestInput = z.infer<typeof GenerateRequestSchema>;
 export type Game = z.infer<typeof GameSchema>;
 export type GameGenerationResponse = z.infer<typeof GameGenerationResponseSchema>;
 export type ReflectionInput = z.infer<typeof ReflectionSchema>;
+export type CoachingResponse = z.infer<typeof CoachingResponseSchema>;
 export type InsightsResponse = z.infer<typeof InsightsResponseSchema>;

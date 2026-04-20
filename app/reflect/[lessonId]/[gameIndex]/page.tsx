@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ReflectionForm } from "@/components/ReflectionForm";
-import db, { parseLessonGames, type LessonRow } from "@/lib/db";
+import { getLessonById, parseLessonGames } from "@/lib/db";
 import { requireSessionUser } from "@/lib/server-auth";
 
 type ReflectPageProps = {
@@ -9,11 +9,8 @@ type ReflectPageProps = {
 
 export default async function ReflectPage({ params }: ReflectPageProps) {
   const { lessonId, gameIndex } = await params;
-  const user = await requireSessionUser();
-
-  const lesson = db
-    .prepare("SELECT * FROM lessons WHERE id = ? AND user_id = ?")
-    .get(Number(lessonId), user.id) as LessonRow | undefined;
+  await requireSessionUser();
+  const lesson = await getLessonById(Number(lessonId));
 
   if (!lesson) {
     notFound();
@@ -28,8 +25,8 @@ export default async function ReflectPage({ params }: ReflectPageProps) {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-3xl font-bold">Quick Reflection</h1>
-      <p className="text-lg text-slate-700">Capture what happened while it&apos;s fresh.</p>
+      <h1 className="text-3xl font-black tracking-tight text-slate-900">Teacher Feedback</h1>
+      <p className="text-sm text-slate-500">Rate the game, add quick notes, and get instant AI suggestions.</p>
       <ReflectionForm lessonId={lesson.id} gameIndex={index} gameName={games[index].name} />
     </section>
   );

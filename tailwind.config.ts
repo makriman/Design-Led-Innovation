@@ -10,20 +10,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#0030ab",
-        accent: "#db3e4a",
-        neutral: "#e8e8e8",
-        border: "#d8d8d8",
-        foreground: "#1a1a1a",
+        primary: "#1a1aff",
+        accent: "#ff385c",
+        neutral: "#f7f4ef",
+        border: "#d6d0c8",
+        foreground: "#0d0d0d",
         background: "#ffffff",
+        gold: "#f5a623",
+        terra: "#c0522a",
+        sage: "#3d7a5e",
       },
       borderRadius: {
-        lg: "0.75rem",
-        md: "0.625rem",
+        lg: "1rem",
+        md: "0.75rem",
         sm: "0.5rem",
       },
       boxShadow: {
-        card: "0 6px 20px rgba(0, 48, 171, 0.08)",
+        card: "0 14px 30px rgba(15, 23, 42, 0.08)",
       },
     },
   },

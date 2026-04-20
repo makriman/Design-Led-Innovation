@@ -1,39 +1,55 @@
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { scryptSync, timingSafeEqual } from "node:crypto";
 import type { NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import db, { type UserRow } from "@/lib/db";
 
-export const AUTH_COOKIE_NAME = "inspire_token";
-const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+export const AUTH_COOKIE_NAME = "inspire_unlock";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+const HASH_PREFIX = "scrypt";
 
-export type AuthTokenPayload = {
-  userId: number;
-  username: string;
+type SessionTokenPayload = {
+  scope: "unlock";
 };
 
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password, 10);
+export function verifyAppPasscode(passcode: string) {
+  const encodedHash = env.appPasscodeHash.trim();
+  const [algorithm, salt, hashHex] = encodedHash.split("$");
+
+  if (algorithm !== HASH_PREFIX || !salt || !hashHex) {
+    return false;
+  }
+
+  const expected = Buffer.from(hashHex, "hex");
+  const derived = scryptSync(passcode, salt, expected.length);
+  if (expected.length !== derived.length) {
+    return false;
+  }
+  return timingSafeEqual(expected, derived);
 }
 
-export async function comparePassword(password: string, hash: string) {
-  return bcrypt.compare(password, hash);
+export function signSessionToken() {
+  const payload: SessionTokenPayload = { scope: "unlock" };
+  return jwt.sign(payload, env.sessionSecret, { expiresIn: "12h" });
 }
 
-export function signAuthToken(payload: AuthTokenPayload) {
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: "7d" });
-}
-
-export function verifyAuthToken(token: string): AuthTokenPayload | null {
+export function verifySessionToken(token: string): SessionTokenPayload | null {
   try {
-    return jwt.verify(token, env.jwtSecret) as AuthTokenPayload;
+    return jwt.verify(token, env.sessionSecret) as SessionTokenPayload;
   } catch {
     return null;
   }
 }
 
-export function setAuthCookie(response: NextResponse, token: string) {
+export function isUnlockedToken(token?: string) {
+  if (!token) {
+    return false;
+  }
+
+  const payload = verifySessionToken(token);
+  return payload?.scope === "unlock";
+}
+
+export function setSessionCookie(response: NextResponse, token: string) {
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
     value: token,
@@ -41,11 +57,11 @@ export function setAuthCookie(response: NextResponse, token: string) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: TOKEN_MAX_AGE_SECONDS,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
 
-export function clearAuthCookie(response: NextResponse) {
+export function clearSessionCookie(response: NextResponse) {
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
     value: "",
@@ -57,45 +73,6 @@ export function clearAuthCookie(response: NextResponse) {
   });
 }
 
-export async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  if (!token) {
-    return null;
-  }
-
-  const payload = verifyAuthToken(token);
-  if (!payload) {
-    return null;
-  }
-
-  const user = db
-    .prepare("SELECT id, username, password_hash, created_at FROM users WHERE id = ?")
-    .get(payload.userId) as UserRow | undefined;
-
-  if (!user) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    username: user.username,
-  };
-}
-
-export async function requireApiUserFromCookie(cookieToken?: string) {
-  if (!cookieToken) {
-    return null;
-  }
-
-  const payload = verifyAuthToken(cookieToken);
-  if (!payload) {
-    return null;
-  }
-
-  const user = db.prepare("SELECT id, username FROM users WHERE id = ?").get(payload.userId) as
-    | Pick<UserRow, "id" | "username">
-    | undefined;
-
-  return user ?? null;
+export function requireUnlockedApiFromCookie(cookieToken?: string) {
+  return isUnlockedToken(cookieToken);
 }

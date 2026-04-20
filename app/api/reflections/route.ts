@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import db, { parseLessonGames, type LessonRow, type ReflectionRow } from "@/lib/db";
+import {
+  getAllReflections,
+  getLessonById,
+  parseLessonGames,
+  type ReflectionRow,
+  upsertReflection,
+} from "@/lib/db";
+import { generateReflectionCoachingWithClaude } from "@/lib/claude";
 import { ReflectionSchema } from "@/lib/schemas";
-import { AUTH_COOKIE_NAME, requireApiUserFromCookie } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, requireUnlockedApiFromCookie } from "@/lib/auth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const user = await requireApiUserFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
-
-  if (!user) {
+  const unlocked = requireUnlockedApiFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  if (!unlocked) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -19,9 +28,10 @@ export async function POST(request: Request) {
       gameIndex: Number(body.gameIndex),
       gameName: body.gameName,
       starRating: Number(body.starRating),
-      whatWorked: body.whatWorked,
-      whatFlopped: body.whatFlopped,
-      whatToChange: body.whatToChange,
+      teacherFeedback: typeof body.teacherFeedback === "string" ? body.teacherFeedback : undefined,
+      whatWorked: typeof body.whatWorked === "string" ? body.whatWorked : undefined,
+      whatFlopped: typeof body.whatFlopped === "string" ? body.whatFlopped : undefined,
+      whatToChange: typeof body.whatToChange === "string" ? body.whatToChange : undefined,
     };
 
     const parsed = ReflectionSchema.safeParse(normalized);
@@ -29,10 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid reflection payload." }, { status: 400 });
     }
 
-    const lesson = db
-      .prepare("SELECT * FROM lessons WHERE id = ? AND user_id = ?")
-      .get(parsed.data.lessonId, user.id) as LessonRow | undefined;
-
+    const lesson = await getLessonById(parsed.data.lessonId);
     if (!lesson) {
       return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
     }
@@ -42,40 +49,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Game index out of range." }, { status: 400 });
     }
 
-    const existing = db
-      .prepare("SELECT id FROM reflections WHERE user_id = ? AND lesson_id = ? AND game_index = ?")
-      .get(user.id, parsed.data.lessonId, parsed.data.gameIndex) as { id: number } | undefined;
+    const teacherFeedback =
+      parsed.data.teacherFeedback?.trim() ||
+      [parsed.data.whatWorked, parsed.data.whatFlopped, parsed.data.whatToChange].filter(Boolean).join(" | ");
 
-    if (existing) {
-      db.prepare(
-        `UPDATE reflections
-         SET game_name = ?, star_rating = ?, what_worked = ?, what_flopped = ?, what_to_change = ?, created_at = CURRENT_TIMESTAMP
-         WHERE id = ?`
-      ).run(
-        parsed.data.gameName,
-        parsed.data.starRating,
-        parsed.data.whatWorked,
-        parsed.data.whatFlopped,
-        parsed.data.whatToChange,
-        existing.id
-      );
-    } else {
-      db.prepare(
-        `INSERT INTO reflections (user_id, lesson_id, game_index, game_name, star_rating, what_worked, what_flopped, what_to_change)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        user.id,
-        parsed.data.lessonId,
-        parsed.data.gameIndex,
-        parsed.data.gameName,
-        parsed.data.starRating,
-        parsed.data.whatWorked,
-        parsed.data.whatFlopped,
-        parsed.data.whatToChange
-      );
-    }
+    const whatWorked = parsed.data.whatWorked?.trim() || teacherFeedback;
+    const whatFlopped = parsed.data.whatFlopped?.trim() || "Teacher noted this in the main feedback field.";
+    const whatToChange = parsed.data.whatToChange?.trim() || "Apply the AI coaching tips in the next lesson.";
 
-    return NextResponse.json({ ok: true });
+    const coaching =
+      (await generateReflectionCoachingWithClaude({
+        gameName: parsed.data.gameName,
+        starRating: parsed.data.starRating,
+        teacherFeedback,
+      }).catch(() => null)) ?? {
+        summary: "Thanks for the reflection. You are building momentum every class.",
+        tips: [
+          "Keep instructions to one short sentence before starting the activity.",
+          "Try one small change next class and compare learner response.",
+        ],
+        futurePlanNote: "Inspire will improve future plans using this feedback.",
+      };
+
+    await upsertReflection({
+      lessonId: parsed.data.lessonId,
+      gameIndex: parsed.data.gameIndex,
+      gameName: parsed.data.gameName,
+      starRating: parsed.data.starRating,
+      teacherFeedback,
+      aiCoaching: coaching,
+      whatWorked,
+      whatFlopped,
+      whatToChange,
+    });
+
+    return NextResponse.json({ ok: true, coaching });
   } catch {
     return NextResponse.json({ error: "Could not save reflection." }, { status: 500 });
   }
@@ -83,15 +91,12 @@ export async function POST(request: Request) {
 
 export async function GET() {
   const cookieStore = await cookies();
-  const user = await requireApiUserFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
-
-  if (!user) {
+  const unlocked = requireUnlockedApiFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  if (!unlocked) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const reflections = db
-    .prepare("SELECT * FROM reflections WHERE user_id = ? ORDER BY created_at DESC")
-    .all(user.id) as ReflectionRow[];
+  const reflections = (await getAllReflections()) as ReflectionRow[];
 
   return NextResponse.json({ reflections });
 }

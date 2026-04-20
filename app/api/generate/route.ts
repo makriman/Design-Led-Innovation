@@ -3,13 +3,15 @@ import { cookies } from "next/headers";
 import { createLesson } from "@/lib/db";
 import { generateGamesWithClaude } from "@/lib/claude";
 import { GenerateRequestSchema } from "@/lib/schemas";
-import { AUTH_COOKIE_NAME, requireApiUserFromCookie } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, requireUnlockedApiFromCookie } from "@/lib/auth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const user = await requireApiUserFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
-
-  if (!user) {
+  const unlocked = requireUnlockedApiFromCookie(cookieStore.get(AUTH_COOKIE_NAME)?.value);
+  if (!unlocked) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -23,8 +25,7 @@ export async function POST(request: Request) {
 
     const generation = await generateGamesWithClaude(parsed.data);
 
-    const lessonId = createLesson({
-      userId: user.id,
+    const lessonId = await createLesson({
       grade: parsed.data.grade,
       studentCount: parsed.data.studentCount,
       subject: parsed.data.subject,

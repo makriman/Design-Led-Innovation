@@ -8,21 +8,21 @@ Inspire is a Next.js app for primary school teachers in Sub-Saharan Africa. Teac
 
 - Next.js 15 (App Router + TypeScript)
 - Tailwind CSS + shadcn-style UI components
-- SQLite (`better-sqlite3`) at `./data/inspire.db`
-- Auth via JWT (`jsonwebtoken`) + bcrypt + `httpOnly` cookie
-- Anthropic Messages API (`claude-sonnet-4-5`)
+- Neon Postgres via `DATABASE_URL` (Vercel Marketplace friendly)
+- Single passcode unlock via scrypt hash + JWT session cookie (`httpOnly`, 12h TTL)
+- Anthropic Messages API (`claude-sonnet-4-6` by default, configurable)
 - Zod validation
 - lucide-react icons
 
 ## Features
 
-- Signup/login/logout with secure cookie sessions
+- Single passcode unlock flow (`/unlock`) with secure cookie sessions
 - Protected teacher routes (`/dashboard`, `/generate`, `/history`, `/reflect`, `/insights`)
 - Lesson generation with 3 constrained, resource-aware games
-- Lesson caching in SQLite for offline-tolerant reopen
+- Persistent lesson/reflection history in Postgres with infinite-scroll-friendly pagination
 - Regenerate a single game from results screen
 - Reflection logging (3-question flow)
-- Insights generation and caching based on reflection count
+- Insights snapshots plus deterministic AI response caching and call logging
 - Print-friendly game cards (one A4 page per game)
 - Mobile-first layout with large controls for 360px screens
 
@@ -31,7 +31,7 @@ Inspire is a Next.js app for primary school teachers in Sub-Saharan Africa. Teac
 1. Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 2. Copy env template and fill values:
@@ -44,28 +44,36 @@ cp .env.local.example .env.local
 
 ```env
 ANTHROPIC_API_KEY=your-anthropic-api-key
-JWT_SECRET=change-me-to-a-long-random-string
+ANTHROPIC_MODEL=claude-sonnet-4-6
+DATABASE_URL=postgres://user:pass@host/db?sslmode=require
+APP_PASSCODE_HASH=scrypt$your-random-salt$your-derived-hex-hash
+SESSION_SECRET=change-me-to-a-long-random-string
+```
+
+Generate `APP_PASSCODE_HASH` safely (example for passcode `5243`):
+
+```bash
+node -e 'const { randomBytes, scryptSync } = require("node:crypto"); const passcode = "5243"; const salt = randomBytes(16).toString("hex"); const hash = scryptSync(passcode, salt, 32).toString("hex"); console.log(`scrypt$${salt}$${hash}`);'
 ```
 
 4. Run the app:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000)
 
 ## Database
 
-Database file: `./data/inspire.db`
+Database: Neon Postgres (`DATABASE_URL`)
 
-Tables are initialized automatically on server boot in `lib/db.ts` using `CREATE TABLE IF NOT EXISTS`.
+Tables are initialized automatically on first query in `lib/db.ts` using idempotent `CREATE TABLE IF NOT EXISTS`.
 
 ## API Routes
 
-- `POST /api/auth/signup`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
+- `POST /api/unlock`
+- `POST /api/unlock/logout`
 - `POST /api/generate`
 - `POST /api/generate/regenerate`
 - `GET /api/lessons`
@@ -74,7 +82,7 @@ Tables are initialized automatically on server boot in `lib/db.ts` using `CREATE
 - `GET /api/reflections`
 - `POST /api/insights`
 
-Protected routes validate JWT from the `inspire_token` cookie and return `401` on invalid/missing auth.
+Protected routes validate the unlock cookie (`inspire_unlock`) and return `401` on invalid/missing auth.
 
 ## Project Structure
 
@@ -85,9 +93,8 @@ app/
   generate/[id]/
   history/
   insights/
-  login/
+  unlock/
   reflect/[lessonId]/[gameIndex]/
-  signup/
 components/
   ui/
 lib/
@@ -101,5 +108,5 @@ middleware.ts
 
 ## Notes
 
-- If `ANTHROPIC_API_KEY` or `JWT_SECRET` is missing, app startup fails loudly.
-- Only Anthropic is required externally; all data is local in SQLite.
+- If `ANTHROPIC_API_KEY`, `DATABASE_URL`, `APP_PASSCODE_HASH`, or session secret is missing, startup fails loudly.
+- Anthropic + Postgres are the required external services for production.
