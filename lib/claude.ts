@@ -43,18 +43,43 @@ function extractTextFromClaudeResponse(content: Anthropic.Messages.ContentBlock[
     .trim();
 }
 
+function cleanJsonCandidate(text: string): string {
+  return text
+    .trim()
+    .replace(/^\uFEFF/, "")
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .replace(/,\s*(?=[}\]])/g, "");
+}
+
+function tryParseJsonCandidate(text: string): unknown | null {
+  try {
+    return JSON.parse(cleanJsonCandidate(text));
+  } catch {
+    return null;
+  }
+}
+
 function parseJsonObject(text: string): unknown {
   const trimmed = text.trim();
-
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const match = trimmed.match(/\{[\s\S]*\}/);
-    if (!match) {
-      throw new Error("Claude did not return JSON");
-    }
-    return JSON.parse(match[0]);
+  const direct = tryParseJsonCandidate(trimmed);
+  if (direct !== null) {
+    return direct;
   }
+
+  const match = trimmed.match(/\{[\s\S]*\}/);
+  if (!match) {
+    throw new Error("Claude did not return JSON");
+  }
+
+  const extracted = tryParseJsonCandidate(match[0]);
+  if (extracted !== null) {
+    return extracted;
+  }
+
+  throw new Error("Claude returned malformed JSON");
 }
 
 function normalizeForCache(value: unknown): unknown {
@@ -208,12 +233,13 @@ The 3 games must be meaningfully different: one movement-based, one verbal/call-
 Hard material rule: every item in "materials" must be realistic for a rural classroom and must come from this allowed pool only: chalk, blackboard, paper, stones, sticks, bottle caps, leaves, children's bodies, voices.`;
 
   let lastError: unknown;
+  let retryReason = "Output did not match the schema.";
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     const retryNote =
       attempt === 0
         ? ""
-        : "\n\nYour previous output was invalid. Retry and obey every schema/material rule exactly.";
+        : `\n\nYour previous output was invalid (${retryReason}). Retry and obey every schema/material rule exactly. Return strict JSON only.`;
 
     const startedAt = Date.now();
     const requestPayload = {
@@ -221,7 +247,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
       attempt,
       systemPrompt,
       userPrompt: `${userPrompt}${retryNote}`,
-      temperature: 0.7,
+      temperature: 0.35,
       maxTokens: 4000,
     };
 
@@ -229,7 +255,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
       const response = await getAnthropicClient().messages.create({
         model: env.anthropicModel,
         max_tokens: 4000,
-        temperature: 0.7,
+        temperature: 0.35,
         system: systemPrompt,
         messages: [{ role: "user", content: `${userPrompt}${retryNote}` }],
       });
@@ -261,6 +287,7 @@ Hard material rule: every item in "materials" must be realistic for a rural clas
       return parsed;
     } catch (error) {
       lastError = error;
+      retryReason = errorToText(error).slice(0, 180);
       await createAiCallLog({
         operation,
         cacheKey,

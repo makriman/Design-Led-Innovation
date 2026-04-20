@@ -8,7 +8,7 @@ function requireEnv(name: string): string {
 
 function resolveAnthropicModel(): string {
   const configuredModel = process.env.ANTHROPIC_MODEL?.trim();
-  return configuredModel || "claude-sonnet-4-6";
+  return configuredModel || "claude-3-5-sonnet-latest";
 }
 
 export const env = {
