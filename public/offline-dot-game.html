@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Inspire Offline Dot Game</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #1616d8;
+        font-family: "DM Sans", "Segoe UI", sans-serif;
+      }
+
+      #game-root {
+        position: fixed;
+        inset: 0;
+        isolation: isolate;
+      }
+
+      #game-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #hud {
+        position: absolute;
+        left: 50%;
+        top: 14px;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: rgba(8, 8, 44, 0.44);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .stat-label {
+        opacity: 0.85;
+      }
+
+      .stat-value {
+        min-width: 20px;
+        text-align: right;
+      }
+
+      #status-chip {
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(8, 8, 44, 0.46);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      #instructions {
+        position: absolute;
+        left: 50%;
+        bottom: 16%;
+        transform: translateX(-50%);
+        width: min(560px, calc(100% - 24px));
+        padding: 14px 18px;
+        border-radius: 18px;
+        text-align: center;
+        color: #fff;
+        background: rgba(8, 8, 44, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        font-size: 15px;
+        line-height: 1.35;
+      }
+
+      #game-over {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(360px, calc(100% - 24px));
+        padding: 20px;
+        border-radius: 22px;
+        text-align: center;
+        color: #fff;
+        background: rgba(8, 8, 44, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.32);
+        box-shadow: 0 24px 44px rgba(0, 0, 0, 0.35);
+        display: none;
+      }
+
+      #game-over h1 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        letter-spacing: -0.02em;
+      }
+
+      #game-over p {
+        margin: 5px 0;
+        font-size: 16px;
+      }
+
+      #restart-button {
+        margin-top: 14px;
+        border: 0;
+        border-radius: 999px;
+        background: #fff;
+        color: #1a1aff;
+        font-size: 15px;
+        font-weight: 800;
+        padding: 11px 16px;
+        cursor: pointer;
+      }
+
+      #restart-button:focus-visible {
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
+
+      #reconnect-banner {
+        position: absolute;
+        left: 50%;
+        bottom: 20px;
+        transform: translateX(-50%);
+        width: min(560px, calc(100% - 24px));
+        border-radius: 16px;
+        padding: 12px 16px;
+        color: #0f1632;
+        background: rgba(255, 255, 255, 0.95);
+        font-weight: 700;
+        text-align: center;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-root">
+      <canvas id="game-canvas" aria-label="Offline Flappy Dot Game"></canvas>
+
+      <div id="status-chip">Offline Mode</div>
+      <div id="hud">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="score">0</span>
+        <span class="stat-label">High</span>
+        <span class="stat-value" id="high-score">0</span>
+      </div>
+
+      <div id="instructions">
+        Tap, click, or press Space to jump the dot through the white-dot lanes.
+      </div>
+
+      <div id="game-over">
+        <h1>Nice run</h1>
+        <p>Score: <strong id="final-score">0</strong></p>
+        <p>Session High: <strong id="final-high-score">0</strong></p>
+        <button id="restart-button" type="button">Play Again</button>
+      </div>
+
+      <div id="reconnect-banner">
+        Back online. Returning to dashboard in <span id="reconnect-countdown">3</span>s...
+      </div>
+    </div>
+
+    <script src="/offline-dot-game.js" defer></script>
+  </body>
+</html>
