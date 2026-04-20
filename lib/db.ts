@@ -2,7 +2,14 @@ import { neon } from "@neondatabase/serverless";
 import { env } from "@/lib/env";
 import type { CoachingResponse, Game, InsightsResponse } from "@/lib/schemas";
 
-const sql = neon(env.databaseUrl);
+let sqlClient: ReturnType<typeof neon> | null = null;
+
+function getSql() {
+  if (!sqlClient) {
+    sqlClient = neon(env.databaseUrl);
+  }
+  return sqlClient;
+}
 
 declare global {
   // eslint-disable-next-line no-var
@@ -10,7 +17,7 @@ declare global {
 }
 
 async function initializeDatabase() {
-  await sql.query(`
+  await getSql().query(`
     CREATE TABLE IF NOT EXISTS lessons (
       id BIGSERIAL PRIMARY KEY,
       grade TEXT NOT NULL,
@@ -23,7 +30,7 @@ async function initializeDatabase() {
     );
   `);
 
-  await sql.query(`
+  await getSql().query(`
     CREATE TABLE IF NOT EXISTS reflections (
       id BIGSERIAL PRIMARY KEY,
       lesson_id BIGINT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -40,7 +47,7 @@ async function initializeDatabase() {
     );
   `);
 
-  await sql.query(`
+  await getSql().query(`
     CREATE TABLE IF NOT EXISTS insights_snapshots (
       id BIGSERIAL PRIMARY KEY,
       patterns_json JSONB NOT NULL,
@@ -49,7 +56,7 @@ async function initializeDatabase() {
     );
   `);
 
-  await sql.query(`
+  await getSql().query(`
     CREATE TABLE IF NOT EXISTS ai_cache_entries (
       cache_key TEXT PRIMARY KEY,
       operation TEXT NOT NULL,
@@ -64,7 +71,7 @@ async function initializeDatabase() {
     );
   `);
 
-  await sql.query(`
+  await getSql().query(`
     CREATE TABLE IF NOT EXISTS ai_call_log (
       id BIGSERIAL PRIMARY KEY,
       operation TEXT NOT NULL,
@@ -81,18 +88,18 @@ async function initializeDatabase() {
     );
   `);
 
-  await sql.query(`CREATE INDEX IF NOT EXISTS idx_lessons_id_desc ON lessons (id DESC);`);
-  await sql.query(
+  await getSql().query(`CREATE INDEX IF NOT EXISTS idx_lessons_id_desc ON lessons (id DESC);`);
+  await getSql().query(
     `CREATE INDEX IF NOT EXISTS idx_reflections_lesson_created_desc ON reflections (lesson_id, created_at DESC, id DESC);`
   );
-  await sql.query(`CREATE INDEX IF NOT EXISTS idx_reflections_created_desc ON reflections (created_at DESC, id DESC);`);
-  await sql.query(
+  await getSql().query(`CREATE INDEX IF NOT EXISTS idx_reflections_created_desc ON reflections (created_at DESC, id DESC);`);
+  await getSql().query(
     `CREATE INDEX IF NOT EXISTS idx_insights_snapshots_created_desc ON insights_snapshots (created_at DESC, id DESC);`
   );
-  await sql.query(
+  await getSql().query(
     `CREATE INDEX IF NOT EXISTS idx_ai_cache_operation_updated_desc ON ai_cache_entries (operation, updated_at DESC);`
   );
-  await sql.query(`CREATE INDEX IF NOT EXISTS idx_ai_call_log_created_desc ON ai_call_log (created_at DESC, id DESC);`);
+  await getSql().query(`CREATE INDEX IF NOT EXISTS idx_ai_call_log_created_desc ON ai_call_log (created_at DESC, id DESC);`);
 }
 
 async function ensureDatabaseReady() {
@@ -108,7 +115,7 @@ async function ensureDatabaseReady() {
 
 async function queryRows<T>(queryText: string, params: unknown[] = []) {
   await ensureDatabaseReady();
-  return (await sql.query(queryText, params)) as T[];
+  return (await getSql().query(queryText, params)) as T[];
 }
 
 function toNumber(value: unknown) {
