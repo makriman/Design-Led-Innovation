@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Loader2, Sparkles, Star } from "lucide-react";
-import { RatingLottie } from "@/components/RatingLottie";
+import { RatingMoodAnimation } from "@/components/RatingMoodAnimation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -48,6 +48,43 @@ const lowRatingSupportOptions = [
   "Need stronger assessment cues",
   "Need alternative low-material setup",
 ];
+
+function FeedbackTileGroup({
+  title,
+  options,
+  value,
+  onSelect,
+}: {
+  title: string;
+  options: string[];
+  value: string;
+  onSelect: (next: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold text-slate-700">{title}</Label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((option) => {
+          const selected = option === value;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onSelect(option)}
+              className={`rounded-xl border px-3 py-3 text-left text-sm font-medium transition ${
+                selected
+                  ? "border-primary/40 bg-primary/10 text-primary shadow-sm"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionFormProps) {
   const [starRating, setStarRating] = useState(0);
@@ -149,7 +186,7 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
             </div>
           </div>
 
-          <RatingLottie rating={starRating} />
+          <RatingMoodAnimation rating={starRating} />
 
           {isLowRating ? (
             <section className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50/60 p-4">
@@ -157,65 +194,26 @@ export function ReflectionForm({ lessonId, gameIndex, gameName }: ReflectionForm
                 Thanks for being honest. Help us capture what failed so the next plan improves.
               </p>
 
-              <div className="space-y-2">
-                <Label htmlFor="lowRatingReason" className="text-sm font-semibold text-slate-700">
-                  Main issue
-                </Label>
-                <select
-                  id="lowRatingReason"
-                  value={lowRatingReason}
-                  onChange={(event) => setLowRatingReason(event.target.value)}
-                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  required
-                >
-                  <option value="">Select one</option>
-                  {lowRatingReasonOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FeedbackTileGroup
+                title="Main issue"
+                options={lowRatingReasonOptions}
+                value={lowRatingReason}
+                onSelect={setLowRatingReason}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="lowRatingContext" className="text-sm font-semibold text-slate-700">
-                  Classroom factor
-                </Label>
-                <select
-                  id="lowRatingContext"
-                  value={lowRatingContext}
-                  onChange={(event) => setLowRatingContext(event.target.value)}
-                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  required
-                >
-                  <option value="">Select one</option>
-                  {lowRatingContextOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FeedbackTileGroup
+                title="Classroom factor"
+                options={lowRatingContextOptions}
+                value={lowRatingContext}
+                onSelect={setLowRatingContext}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="lowRatingSupport" className="text-sm font-semibold text-slate-700">
-                  Most useful support for next class
-                </Label>
-                <select
-                  id="lowRatingSupport"
-                  value={lowRatingSupport}
-                  onChange={(event) => setLowRatingSupport(event.target.value)}
-                  className="min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  required
-                >
-                  <option value="">Select one</option>
-                  {lowRatingSupportOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FeedbackTileGroup
+                title="Most useful support for next class"
+                options={lowRatingSupportOptions}
+                value={lowRatingSupport}
+                onSelect={setLowRatingSupport}
+              />
             </section>
           ) : null}
 

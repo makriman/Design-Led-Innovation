@@ -1,0 +1,151 @@
+.card {
+  border: 1px solid rgba(26, 26, 255, 0.16);
+  border-radius: 1rem;
+  background: linear-gradient(145deg, rgba(26, 26, 255, 0.05), rgba(255, 255, 255, 0.88));
+  padding: 1rem;
+}
+
+.label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #1a1aff;
+}
+
+.layout {
+  margin-top: 0.35rem;
+  display: grid;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.stage {
+  height: 120px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 50% 34%, rgba(255, 255, 255, 0.98), rgba(230, 231, 255, 0.92) 70%, rgba(210, 214, 255, 0.74));
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #f2f4ff 58%, #dde2ff 100%);
+  box-shadow: 0 0 28px rgba(26, 26, 255, 0.22);
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+}
+
+.face {
+  width: 48px;
+  height: 48px;
+}
+
+.sparkle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(26, 26, 255, 0.6);
+}
+
+.sparkleTop {
+  top: 24px;
+  left: 24%;
+}
+
+.sparkleRight {
+  top: 56px;
+  right: 20%;
+}
+
+.sparkleBottom {
+  bottom: 18px;
+  left: 38%;
+}
+
+.low .glow {
+  animation: wobble 0.75s ease-in-out infinite;
+}
+
+.mid .glow {
+  animation: pulse 1.25s ease-in-out infinite;
+}
+
+.high .glow {
+  animation: floaty 1.8s ease-in-out infinite;
+}
+
+.high .sparkle {
+  animation: twinkle 1.2s ease-in-out infinite;
+}
+
+.copyTitle {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.copyBody {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: #475569;
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(0.98);
+  }
+  25% {
+    transform: rotate(-6deg) scale(1);
+  }
+  75% {
+    transform: rotate(6deg) scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-7px) scale(1.03);
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@media (min-width: 640px) {
+  .layout {
+    grid-template-columns: 130px 1fr;
+  }
+}
