@@ -32,5 +32,15 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2"
+  },
+  "license": "MIT",
+  "description": "A play-based lesson generation app for primary school teachers in Sub-Saharan Africa.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/makriman/Design-Led-Innovation.git"
+  },
+  "homepage": "https://designledinnovation.vercel.app/",
+  "bugs": {
+    "url": "https://github.com/makriman/Design-Led-Innovation/issues"
   }
 }
